@@ -16,16 +16,16 @@ $tag = $ReleaseTag
 $releaseBase = "https://github.com/$repo/releases/download/$tag"
 $zipName = "image-super-resolution-tool-full.zip"
 $packageRoot = "image-super-resolution-tool"
-$expectedZipHash = "8CF07431598A6D9058689D912821887745CF10BC41F4F464F13054214F15E60B"
+$expectedZipHash = "F7E5AF75328545E508DEF25DA1BE5A885C5EE4B36A065CBF74121C6C2CFEAC62"
 
 $assets = @(
     @{
         Name = "image-super-resolution-tool-full.zip.001"
-        Hash = "052FA9C8EBDF4A6B9A56392B8A08EEFBBABC530748EA9C1536C747485173C125"
+        Hash = "5DBB138CA33030690473838E72589AB42A71CEB1D96107301B8B355074BF88B1"
     },
     @{
         Name = "image-super-resolution-tool-full.zip.002"
-        Hash = "0F1311455BC3C82F9BCD1F554B555EE66FEAC3566ABFF07E3011AE445566EFA6"
+        Hash = "017C985A9FBD5D566D482FC15D47BC138EA74B36B7FC041B59CAECC95A8807F1"
     }
 )
 

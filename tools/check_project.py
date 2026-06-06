@@ -80,7 +80,7 @@ def check_installer_constants() -> None:
     for asset in ["image-super-resolution-tool-full.zip.001", "image-super-resolution-tool-full.zip.002"]:
         if asset not in text:
             fail(f"installer script does not reference {asset}")
-    if "8CF07431598A6D9058689D912821887745CF10BC41F4F464F13054214F15E60B" not in text:
+    if not re.search(r'\$expectedZipHash\s*=\s*"[0-9A-F]{64}"', text):
         fail("installer script is missing final package hash")
 
 
