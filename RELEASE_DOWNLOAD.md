@@ -21,4 +21,6 @@ powershell -ExecutionPolicy Bypass -File .\merge-full-package.ps1
 image-super-resolution-tool-full.zip
 ```
 
-解压后双击 `打开超分工具.bat` 即可使用。
+脚本会自动校验 SHA256。校验通过后，解压 ZIP，双击 `打开超分工具.bat` 即可使用。
+
+如果完整包里的运行环境在你的电脑上不可用，双击 `安装运行环境.bat` 重新安装一次即可。
