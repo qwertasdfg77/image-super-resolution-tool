@@ -30,10 +30,10 @@ powershell -ExecutionPolicy Bypass -File .\merge-full-package.ps1
 会生成 `image-super-resolution-tool-full.zip`。解压后双击：
 
 ```text
-打开超分工具.bat
+start_gui.bat
 ```
 
-如果完整包里的运行环境在你的电脑上不可用，双击 `安装运行环境.bat` 重新安装一次即可。
+如果完整包里的运行环境在你的电脑上不可用，双击 `install_gpu.bat` 重新安装一次即可。
 
 ## 使用源码版
 
@@ -46,7 +46,7 @@ powershell -ExecutionPolicy Bypass -File .\merge-full-package.ps1
 安装完成后运行：
 
 ```text
-打开超分工具.bat
+start_gui.bat
 ```
 
 第一次超分会自动下载模型权重到 `models` 文件夹。
