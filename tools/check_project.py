@@ -30,10 +30,14 @@ REQUIRED_FILES = [
     "docs/images/app-preview.png",
     "docs/images/before-after-demo.png",
     "docs/release-v1.0.0.md",
+    "docs/release-v1.0.1.md",
+    ".github/dependabot.yml",
     ".github/ISSUE_TEMPLATE/bug_report.yml",
     ".github/ISSUE_TEMPLATE/feature_request.yml",
     ".github/ISSUE_TEMPLATE/config.yml",
     ".github/workflows/python-check.yml",
+    ".github/workflows/codeql.yml",
+    ".github/workflows/release-check.yml",
 ]
 REQUIRED_RELEASE_ASSETS = {
     "ImageSuperResolutionToolWebSetup.exe",
@@ -79,8 +83,8 @@ def check_installer_constants() -> None:
         fail("installer script is missing final package hash")
 
 
-def check_release_assets() -> None:
-    url = "https://api.github.com/repos/qwertasdfg77/image-super-resolution-tool/releases/tags/v1.0.0"
+def check_release_assets(release_tag: str) -> None:
+    url = f"https://api.github.com/repos/qwertasdfg77/image-super-resolution-tool/releases/tags/{release_tag}"
     with urllib.request.urlopen(url, timeout=30) as response:
         payload = json.loads(response.read().decode("utf-8"))
     assets = {asset["name"] for asset in payload.get("assets", [])}
@@ -92,13 +96,14 @@ def check_release_assets() -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-release", action="store_true", help="Skip GitHub Release asset check.")
+    parser.add_argument("--release-tag", default="v1.0.1", help="Release tag to check.")
     args = parser.parse_args()
 
     check_required_files()
     check_readme_links()
     check_installer_constants()
     if not args.skip_release:
-        check_release_assets()
+        check_release_assets(args.release_tag)
     print("project checks passed")
     return 0
 

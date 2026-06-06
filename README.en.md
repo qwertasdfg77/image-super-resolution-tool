@@ -1,6 +1,7 @@
 # Image Super Resolution Tool
 
 [![Python check](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/python-check.yml/badge.svg)](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/python-check.yml)
+[![CodeQL](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/codeql.yml/badge.svg)](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/github/license/qwertasdfg77/image-super-resolution-tool)](LICENSE)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D4)
 ![CUDA](https://img.shields.io/badge/NVIDIA-CUDA-76B900)
@@ -16,7 +17,7 @@ Chinese README: [README.md](README.md)
 
 ## Recommended Download
 
-Open the [v1.0.0 release page](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.0) and download:
+Open the [v1.0.1 release page](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.1) and download:
 
 ```text
 ImageSuperResolutionToolWebSetup.exe

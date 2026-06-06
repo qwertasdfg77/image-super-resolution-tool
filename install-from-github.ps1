@@ -1,16 +1,18 @@
 param(
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA "Programs\ImageSuperResolutionTool"),
     [string]$WorkDir = (Join-Path $env:TEMP "ImageSuperResolutionToolInstall"),
+    [string]$ReleaseTag = "v1.0.1",
     [switch]$SkipShortcut,
     [switch]$KeepDownloads,
-    [switch]$CheckOnly
+    [switch]$CheckOnly,
+    [int]$MaxRetries = 3
 )
 
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $repo = "qwertasdfg77/image-super-resolution-tool"
-$tag = "v1.0.0"
+$tag = $ReleaseTag
 $releaseBase = "https://github.com/$repo/releases/download/$tag"
 $zipName = "image-super-resolution-tool-full.zip"
 $packageRoot = "image-super-resolution-tool"
@@ -32,6 +34,24 @@ function Write-Step([string]$Message) {
     Write-Host "== $Message =="
 }
 
+function Format-Bytes([double]$Bytes) {
+    if ($Bytes -ge 1GB) { return "{0:N2} GB" -f ($Bytes / 1GB) }
+    if ($Bytes -ge 1MB) { return "{0:N1} MB" -f ($Bytes / 1MB) }
+    if ($Bytes -ge 1KB) { return "{0:N1} KB" -f ($Bytes / 1KB) }
+    return "{0:N0} B" -f $Bytes
+}
+
+function Format-Duration([double]$Seconds) {
+    if ($Seconds -lt 0 -or [double]::IsNaN($Seconds) -or [double]::IsInfinity($Seconds)) {
+        return "--:--"
+    }
+    $span = [TimeSpan]::FromSeconds([Math]::Round($Seconds))
+    if ($span.TotalHours -ge 1) {
+        return "{0:00}:{1:00}:{2:00}" -f [Math]::Floor($span.TotalHours), $span.Minutes, $span.Seconds
+    }
+    return "{0:00}:{1:00}" -f $span.Minutes, $span.Seconds
+}
+
 function Get-Hash([string]$Path) {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToUpperInvariant()
 }
@@ -50,6 +70,65 @@ function Test-RemoteAsset([string]$Url) {
     }
 }
 
+function Download-FileWithProgress([string]$Url, [string]$Destination, [string]$DisplayName) {
+    $tempDestination = "$Destination.download"
+    if (Test-Path -LiteralPath $tempDestination) {
+        Remove-Item -LiteralPath $tempDestination -Force
+    }
+
+    $request = [System.Net.HttpWebRequest]::Create($Url)
+    $request.Method = "GET"
+    $request.AllowAutoRedirect = $true
+    $request.UserAgent = "ImageSuperResolutionToolInstaller/1.0.1"
+    $response = $request.GetResponse()
+    $totalBytes = [int64]$response.ContentLength
+    $inputStream = $response.GetResponseStream()
+    $outputStream = [System.IO.File]::Create($tempDestination)
+    $buffer = New-Object byte[] (1024 * 1024)
+    $downloaded = [int64]0
+    $startedAt = Get-Date
+    $lastPrintedAt = Get-Date
+
+    try {
+        while ($true) {
+            $read = $inputStream.Read($buffer, 0, $buffer.Length)
+            if ($read -le 0) { break }
+
+            $outputStream.Write($buffer, 0, $read)
+            $downloaded += $read
+
+            $now = Get-Date
+            if (($now - $lastPrintedAt).TotalSeconds -ge 1 -or ($totalBytes -gt 0 -and $downloaded -eq $totalBytes)) {
+                $elapsed = [Math]::Max(0.1, ($now - $startedAt).TotalSeconds)
+                $speed = $downloaded / $elapsed
+                $eta = if ($totalBytes -gt 0 -and $speed -gt 0) { ($totalBytes - $downloaded) / $speed } else { -1 }
+                $status = "$(Format-Bytes $downloaded)"
+                if ($totalBytes -gt 0) {
+                    $status = "$status / $(Format-Bytes $totalBytes)"
+                }
+                $status = "$status | $(Format-Bytes $speed)/s | ETA $(Format-Duration $eta)"
+
+                if ($totalBytes -gt 0) {
+                    $percent = [Math]::Min(100, [Math]::Round(($downloaded / $totalBytes) * 100, 1))
+                    Write-Progress -Activity "Downloading $DisplayName" -Status $status -PercentComplete $percent
+                    Write-Host ("{0,6:N1}%  {1}" -f $percent, $status)
+                } else {
+                    Write-Progress -Activity "Downloading $DisplayName" -Status $status
+                    Write-Host $status
+                }
+                $lastPrintedAt = $now
+            }
+        }
+    } finally {
+        if ($outputStream) { $outputStream.Dispose() }
+        if ($inputStream) { $inputStream.Dispose() }
+        if ($response) { $response.Dispose() }
+        Write-Progress -Activity "Downloading $DisplayName" -Completed
+    }
+
+    Move-Item -LiteralPath $tempDestination -Destination $Destination -Force
+}
+
 function Download-Asset([string]$Name, [string]$ExpectedHash, [string]$Destination) {
     $url = "$releaseBase/$Name"
     if (Test-Path -LiteralPath $Destination) {
@@ -61,8 +140,27 @@ function Download-Asset([string]$Name, [string]$ExpectedHash, [string]$Destinati
         Remove-Item -LiteralPath $Destination -Force
     }
 
-    Write-Host "Downloading: $Name"
-    Invoke-WebRequest -Uri $url -OutFile $Destination -UseBasicParsing
+    for ($attempt = 1; $attempt -le $MaxRetries; $attempt++) {
+        try {
+            Write-Host "Downloading: $Name (attempt $attempt/$MaxRetries)"
+            Download-FileWithProgress -Url $url -Destination $Destination -DisplayName $Name
+            break
+        } catch {
+            if (Test-Path -LiteralPath $Destination) {
+                Remove-Item -LiteralPath $Destination -Force
+            }
+            if (Test-Path -LiteralPath "$Destination.download") {
+                Remove-Item -LiteralPath "$Destination.download" -Force
+            }
+            if ($attempt -ge $MaxRetries) {
+                throw "Download failed after $MaxRetries attempts: $Name. $($_.Exception.Message)"
+            }
+            $delay = [Math]::Min(30, [Math]::Pow(2, $attempt))
+            Write-Warning "Download failed: $Name. Retrying in $delay seconds..."
+            Start-Sleep -Seconds $delay
+        }
+    }
+
     $actualHash = Get-Hash $Destination
     if ($actualHash -ne $ExpectedHash) {
         throw "SHA256 mismatch for $Name. Please run the installer again."

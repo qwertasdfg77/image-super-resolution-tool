@@ -1,0 +1,26 @@
+name: Release check
+
+on:
+  schedule:
+    - cron: "36 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  release-assets:
+    runs-on: windows-2025
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Check installer release links
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\install-from-github.ps1 -CheckOnly
+
+      - name: Check release assets
+        run: python tools/check_project.py --release-tag v1.0.1

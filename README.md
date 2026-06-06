@@ -1,6 +1,7 @@
 # 图片超分辨率工具
 
 [![Python check](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/python-check.yml/badge.svg)](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/python-check.yml)
+[![CodeQL](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/codeql.yml/badge.svg)](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/github/license/qwertasdfg77/image-super-resolution-tool)](LICENSE)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D4)
 ![CUDA](https://img.shields.io/badge/NVIDIA-CUDA-76B900)
@@ -18,7 +19,7 @@ English README: [README.en.md](README.en.md)
 
 ## 推荐下载方式
 
-打开 [v1.0.0 完整包下载](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.0)，优先下载：
+打开 [v1.0.1 完整包下载](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.1)，优先下载：
 
 ```text
 ImageSuperResolutionToolWebSetup.exe

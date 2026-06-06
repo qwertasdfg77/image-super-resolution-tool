@@ -1,5 +1,5 @@
 #define AppName "图片超分辨率工具"
-#define AppVersion "1.0.0"
+#define AppVersion "1.0.1"
 #define AppPublisher "qwertasdfg77"
 #define AppURL "https://github.com/qwertasdfg77/image-super-resolution-tool"
 
