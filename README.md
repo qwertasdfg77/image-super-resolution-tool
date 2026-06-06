@@ -1,8 +1,16 @@
 # 图片超分辨率工具
 
+[![Python check](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/python-check.yml/badge.svg)](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/python-check.yml)
+[![License: MIT](https://img.shields.io/github/license/qwertasdfg77/image-super-resolution-tool)](LICENSE)
+![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D4)
+![CUDA](https://img.shields.io/badge/NVIDIA-CUDA-76B900)
+![Transformer](https://img.shields.io/badge/Model-Transformer-4F46E5)
+
 Windows 图片超分辨率工具 / CUDA auto-tuned image upscaler with Transformer model support.
 
 这是一个无需写代码的 Windows 图形界面图片超分工具，支持 NVIDIA CUDA 显卡自动识别、显存自动匹配、ATD Transformer 超分模型、自动锐化和自动去噪。
+
+English README: [README.en.md](README.en.md)
 
 ![界面预览](docs/images/app-preview.png)
 
@@ -64,3 +72,5 @@ start_gui.bat
 超分前后对比图是示意图，用于展示清晰度变化；实际效果取决于原图质量、图片类型和选择的模型。
 
 更多细节见 [README_super_resolution.md](README_super_resolution.md)。完整包下载说明见 [RELEASE_DOWNLOAD.md](RELEASE_DOWNLOAD.md)。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
+
+第三方组件和模型说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。使用支持见 [SUPPORT.md](SUPPORT.md)。安全说明见 [SECURITY.md](SECURITY.md)。
