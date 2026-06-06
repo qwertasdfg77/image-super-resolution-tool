@@ -35,4 +35,6 @@ if not errorlevel 1 (
     )
 )
 
-powershell -ExecutionPolicy Bypass -NoExit -File "%APP_DIR%install_gpu.ps1"
+call "%APP_DIR%install_gpu.bat"
+if errorlevel 1 exit /b 1
+call "%APP_DIR%start_gui.bat"

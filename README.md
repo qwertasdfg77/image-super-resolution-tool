@@ -1,91 +1,55 @@
 # 图片超分辨率工具
 
-[![Python check](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/python-check.yml/badge.svg)](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/python-check.yml)
-[![CodeQL](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/codeql.yml/badge.svg)](https://github.com/qwertasdfg77/image-super-resolution-tool/actions/workflows/codeql.yml)
-[![License: MIT](https://img.shields.io/github/license/qwertasdfg77/image-super-resolution-tool)](LICENSE)
-![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D4)
-![CUDA](https://img.shields.io/badge/NVIDIA-CUDA-76B900)
-![Transformer](https://img.shields.io/badge/Model-Transformer-4F46E5)
+Windows 图形界面图片超分工具。当前公开版本是 `v1.0.3` 轻量版，面向普通用户使用，不需要写代码。
 
-Windows 图片超分辨率工具 / CUDA auto-tuned image upscaler with Transformer model support.
+## 下载
 
-这是一个无需写代码的 Windows 图形界面图片超分工具，支持 NVIDIA CUDA 显卡自动识别、显存自动匹配、ATD Transformer 超分模型、自动锐化和自动去噪。
+请到 Latest Release 下载：
 
-English README: [README.en.md](README.en.md)
+- `ImageSuperResolutionTool-Lightweight.zip`：推荐，下载后解压使用。
+- `下载轻量版.bat`：可选，会自动下载并解压轻量包。
+- `SHA256.txt`：用于校验下载文件。
 
-![界面预览](docs/images/app-preview.png)
+Release 页面：
+https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest
 
-![超分前后对比示意](docs/images/before-after-demo.png)
+## 使用方法
 
-## 推荐下载方式
+1. 解压 `ImageSuperResolutionTool-Lightweight.zip`。
+2. 双击 `打开超分工具.bat`。
+3. 第一次使用先点软件左下角的 `安装/检查环境`。
+4. 环境安装完成后，选择图片或文件夹，选择输出文件夹，然后开始超分。
 
-打开 [v1.0.2 完整包下载](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.2)，优先下载：
+如果电脑还没有 Python，双击启动脚本时会自动打开环境安装窗口。也可以直接双击 `安装运行环境.bat`。
 
-```text
-ImageSuperResolutionToolWebSetup.exe
-```
+## 轻量版包含什么
 
-双击运行后，它会自动下载完整包、合并分卷、校验 SHA256、解压并创建快捷方式。
+轻量包只包含程序源码、图形界面、安装脚本和说明文件。它不包含 Python 运行环境、模型权重和示例照片，所以下载体积很小。
 
-如果不想用安装器，也可以手动下载下面 4 个文件到同一个文件夹：
+第一次安装环境时会下载：
 
-- `image-super-resolution-tool-full.zip.001`
-- `image-super-resolution-tool-full.zip.002`
-- `merge-full-package.ps1`
-- `SHA256.txt`
+- Python 3.12：通过 winget 或 python.org 获取。
+- CUDA 版 PyTorch：从 PyTorch 官方源获取。
+- 其它 Python 依赖：从 Python 包源获取。
+- 超分模型权重：第一次处理图片时自动下载到 `models` 文件夹。
 
-在这个文件夹里打开 PowerShell，运行：
+## 主要功能
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\merge-full-package.ps1
-```
-
-等它生成 `image-super-resolution-tool-full.zip`，解压后进入 `image-super-resolution-tool` 文件夹，双击 `start_gui.bat`。
-
-如果完整包里的运行环境在你的电脑上不可用，双击 `install_gpu.bat` 重新安装一次即可。
-
-## 适合谁
-
-- 想把照片、截图、游戏画面、动漫图放大到 2 倍、3 倍或 4 倍的用户。
-- 有 NVIDIA 显卡，推荐 RTX 4060 8GB 或更高。
-- 想直接双击使用，不想写代码或手动调命令行参数的用户。
-
-## 功能
-
-- 自动识别显卡型号、显存容量和当前空闲显存。
-- 自动选择 tile、显存占用上限和推理精度。
-- 默认使用 ATD x4 Transformer 模型。
-- 支持 Real-ESRGAN 照片/动漫备用模型。
-- 自动锐化和自动去噪。
-- 输出格式选择：自动、PNG、JPEG、WEBP。
-- JPEG/WEBP 质量设置。
-- 处理前后预览，支持打开输出文件夹。
-- 自动检查新版本，并保存上次使用设置。
+- 自动识别 NVIDIA 显卡型号、显存容量和当前空闲显存。
+- 按显卡性能自动匹配更合适的处理占用。
+- 默认使用 Transformer 超分模型。
+- 自动调节锐化和去噪。
 - 百分比进度条，显示已用时间和预计剩余时间。
-- 支持单张图片和整个文件夹批量处理。
+- 支持单张图片和文件夹批量处理。
+- 不保存上次输入图片路径和输出文件夹路径。
+- 软件内不显示处理前后预览栏。
 
-## 使用源码版
+## 推荐配置
 
-源码仓库不包含 `.venv` 和模型权重。第一次使用请运行：
-
-```text
-安装运行环境.bat
-```
-
-安装完成后运行：
-
-```text
-start_gui.bat
-```
-
-第一次超分会自动下载模型权重到 `models` 文件夹。
+- Windows 10 / Windows 11
+- NVIDIA RTX 4060 8GB 或更高
+- 首次安装环境需要稳定网络和较大磁盘空间
 
 ## 说明
 
-这个工具不是游戏里的原生 DLSS。原生 DLSS 需要游戏引擎提供多帧、运动向量和深度信息；本工具处理的是单张图片或图片文件夹。
-
-超分前后对比图是示意图，用于展示清晰度变化；实际效果取决于原图质量、图片类型和选择的模型。
-
-更多细节见 [README_super_resolution.md](README_super_resolution.md)。常见问题见 [FAQ.md](FAQ.md)。完整包下载说明见 [RELEASE_DOWNLOAD.md](RELEASE_DOWNLOAD.md)。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
-
-第三方组件和模型说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。使用支持见 [SUPPORT.md](SUPPORT.md)。安全说明见 [SECURITY.md](SECURITY.md)。
+本工具不是游戏里的原生 DLSS。游戏里的原生 DLSS 需要游戏引擎提供多帧、运动向量和深度信息；本工具处理的是单张图片或图片文件夹。

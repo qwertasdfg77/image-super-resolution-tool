@@ -1,26 +1,20 @@
-name: Release check
+name: Release asset check
 
 on:
-  schedule:
-    - cron: "36 3 * * 1"
   workflow_dispatch:
 
 jobs:
-  release-assets:
-    runs-on: windows-2025
-
+  latest-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Check installer release links
-        shell: pwsh
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\install-from-github.ps1 -CheckOnly
-
-      - name: Check release assets
-        run: python tools/check_project.py --release-tag v1.0.2
+      - name: Check latest release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh release view --repo "$GITHUB_REPOSITORY" --json tagName,name,assets
+          gh release view --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -x 'ImageSuperResolutionTool-Lightweight.zip'
+          gh release view --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -x 'SHA256.txt'
+          gh release view --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -x '下载轻量版.bat'

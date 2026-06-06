@@ -1,83 +1,33 @@
-name: 使用问题 / Bug
-description: 报告安装、启动、显卡检测或超分失败问题
-title: "[问题] "
-labels: ["bug"]
+name: 问题反馈
+description: 报告图片超分辨率工具的问题
+labels: [bug]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        感谢反馈。请尽量填写下面的信息，这样更容易判断是环境、显卡、模型下载还是图片处理问题。
   - type: input
-    id: app_version
+    id: version
     attributes:
       label: 工具版本
-      description: 例如 v1.0.0
-      placeholder: v1.0.0
+      placeholder: v1.0.3
     validations:
       required: true
   - type: input
-    id: windows_version
+    id: windows
     attributes:
       label: Windows 版本
       placeholder: Windows 11 23H2
-    validations:
-      required: true
   - type: input
     id: gpu
     attributes:
       label: 显卡型号和显存
-      placeholder: NVIDIA GeForce RTX 4060 8GB
-    validations:
-      required: true
-  - type: dropdown
-    id: install_type
-    attributes:
-      label: 使用方式
-      options:
-        - 完整可运行包
-        - 源码版
-        - 不确定
-    validations:
-      required: true
-  - type: dropdown
-    id: problem_area
-    attributes:
-      label: 问题发生在哪一步
-      options:
-        - 下载或合并完整包
-        - 安装或检查环境
-        - 启动界面
-        - 检测显卡
-        - 下载模型
-        - 开始超分
-        - 输出结果不符合预期
-        - 其他
-    validations:
-      required: true
+      placeholder: NVIDIA RTX 4060 8GB
   - type: textarea
     id: steps
     attributes:
-      label: 复现步骤
-      description: 按顺序写出你做了什么。
-      placeholder: |
-        1. 双击 start_gui.bat
-        2. 选择图片
-        3. 点击开始超分
+      label: 出现问题前做了什么
+      description: 请写出选择图片、安装环境、开始处理等步骤。
     validations:
       required: true
   - type: textarea
-    id: logs
+    id: log
     attributes:
-      label: 错误日志或截图
-      description: 请粘贴软件窗口里的运行状态文字，或上传截图。
-      render: text
-    validations:
-      required: false
-  - type: textarea
-    id: input_image
-    attributes:
-      label: 输入图片信息
-      description: 图片格式、尺寸、类型即可，不需要上传隐私图片。
-      placeholder: PNG，1920x1080，游戏截图
-    validations:
-      required: false
+      label: 软件运行状态文字
+      description: 可以粘贴窗口底部运行状态里的文字。

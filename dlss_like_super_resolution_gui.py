@@ -16,13 +16,10 @@ from pathlib import Path
 from tkinter import BooleanVar, DoubleVar, IntVar, StringVar, Text, Tk, filedialog, messagebox
 from tkinter import ttk
 
-from PIL import Image, ImageTk
-
-
-CURRENT_VERSION = "v1.0.2"
+CURRENT_VERSION = "v1.0.3"
 APP_DIR = Path(__file__).resolve().parent
 ENGINE_SCRIPT = APP_DIR / "dlss_like_super_resolution.py"
-INSTALL_SCRIPT = APP_DIR / "install_gpu.ps1"
+INSTALL_SCRIPT = APP_DIR / "install_gpu.bat"
 SETTINGS_DIR = Path(os.environ.get("APPDATA", APP_DIR)) / "ImageSuperResolutionTool"
 SETTINGS_PATH = SETTINGS_DIR / "settings.json"
 LATEST_RELEASE_API = "https://api.github.com/repos/qwertasdfg77/image-super-resolution-tool/releases/latest"
@@ -50,6 +47,9 @@ OUTPUT_FORMAT_OPTIONS = {
 
 
 def runtime_python() -> str:
+    venv_python = APP_DIR / ".venv" / "Scripts" / "python.exe"
+    if venv_python.exists():
+        return str(venv_python)
     exe = Path(sys.executable)
     if exe.name.lower() == "pythonw.exe":
         console_python = exe.with_name("python.exe")
@@ -109,13 +109,13 @@ class SuperResolutionApp:
     def __init__(self, root: Tk):
         self.root = root
         self.root.title(f"图片超分辨率工具 {CURRENT_VERSION}")
-        self.root.geometry("1080x860")
-        self.root.minsize(940, 760)
+        self.root.geometry("1080x760")
+        self.root.minsize(940, 680)
 
         settings = load_settings()
         self.settings_ready = False
-        self.input_path = StringVar(value=settings.get("input_path", ""))
-        self.output_path = StringVar(value=settings.get("output_path", ""))
+        self.input_path = StringVar(value="")
+        self.output_path = StringVar(value="")
         self.model_display = StringVar(value=choice_setting(settings, "model_display", "ATD Transformer 自动推荐", MODEL_OPTIONS))
         self.scale = StringVar(value=str(settings.get("scale", "4")) if str(settings.get("scale", "4")) in {"2", "3", "4"} else "4")
         self.gpu_usage_display = StringVar(value=choice_setting(settings, "gpu_usage_display", "自动", GPU_USAGE_OPTIONS))
@@ -134,24 +134,15 @@ class SuperResolutionApp:
         self.log_queue: queue.Queue[str] = queue.Queue()
         self.sharpness_slider: ttk.Scale | None = None
         self.denoise_slider: ttk.Scale | None = None
-        self.preview_before_label: ttk.Label | None = None
-        self.preview_after_label: ttk.Label | None = None
-        self.preview_before_text = StringVar(value="原图预览")
-        self.preview_after_text = StringVar(value="输出预览")
-        self.preview_images: list[ImageTk.PhotoImage] = []
         self.run_started_at: float | None = None
         self.last_eta: float | None = None
         self.last_percent = 0.0
-        self.current_processing_input: Path | None = None
         self.last_output_path: Path | None = None
-        self.last_output_input: Path | None = None
 
         self.build_ui()
         self.auto_sharpness.trace_add("write", lambda *_: self.update_slider_state())
         self.auto_denoise.trace_add("write", lambda *_: self.update_slider_state())
         for var in (
-            self.input_path,
-            self.output_path,
             self.model_display,
             self.scale,
             self.gpu_usage_display,
@@ -166,8 +157,9 @@ class SuperResolutionApp:
         ):
             var.trace_add("write", lambda *_: self.save_current_settings())
         self.settings_ready = True
+        if "input_path" in settings or "output_path" in settings:
+            self.save_current_settings()
         self.update_slider_state()
-        self.update_preview(self.input_path.get(), None)
         self.root.after(120, self.drain_log_queue)
         self.root.after(1000, self.update_elapsed_clock)
         self.root.after(1800, lambda: self.check_updates(manual=False))
@@ -181,7 +173,7 @@ class SuperResolutionApp:
         main = ttk.Frame(self.root, padding=18)
         main.grid(row=0, column=0, sticky="nsew")
         main.columnconfigure(0, weight=1)
-        main.rowconfigure(6, weight=1)
+        main.rowconfigure(5, weight=1)
 
         ttk.Label(main, text="图片超分辨率工具", font=("Microsoft YaHei UI", 17, "bold")).grid(row=0, column=0, sticky="w")
         ttk.Label(main, textvariable=self.status).grid(row=1, column=0, sticky="w", pady=(4, 14))
@@ -257,25 +249,8 @@ class SuperResolutionApp:
         self.denoise_slider = ttk.Scale(post, variable=self.denoise, from_=0, to=0.3, orient="horizontal")
         self.denoise_slider.grid(row=0, column=5, padx=(0, 10), pady=12, sticky="ew")
 
-        preview = ttk.LabelFrame(main, text="预览")
-        preview.grid(row=5, column=0, sticky="ew", pady=(14, 0))
-        preview.columnconfigure(0, weight=1)
-        preview.columnconfigure(1, weight=1)
-
-        before_box = ttk.Frame(preview)
-        before_box.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
-        before_box.columnconfigure(0, weight=1)
-        self.preview_before_label = ttk.Label(before_box, textvariable=self.preview_before_text, anchor="center")
-        self.preview_before_label.grid(row=0, column=0, sticky="nsew")
-
-        after_box = ttk.Frame(preview)
-        after_box.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
-        after_box.columnconfigure(0, weight=1)
-        self.preview_after_label = ttk.Label(after_box, textvariable=self.preview_after_text, anchor="center")
-        self.preview_after_label.grid(row=0, column=0, sticky="nsew")
-
         log_frame = ttk.LabelFrame(main, text="运行状态")
-        log_frame.grid(row=6, column=0, sticky="nsew", pady=(14, 0))
+        log_frame.grid(row=5, column=0, sticky="nsew", pady=(14, 0))
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
 
@@ -286,7 +261,7 @@ class SuperResolutionApp:
         self.log.configure(yscrollcommand=scroll.set)
 
         actions = ttk.Frame(main)
-        actions.grid(row=7, column=0, sticky="ew", pady=(14, 0))
+        actions.grid(row=6, column=0, sticky="ew", pady=(14, 0))
         actions.columnconfigure(4, weight=1)
 
         ttk.Button(actions, text="安装/检查环境", command=self.open_installer).grid(row=0, column=0, padx=(0, 10), sticky="w")
@@ -317,8 +292,6 @@ class SuperResolutionApp:
         try:
             save_settings(
                 {
-                    "input_path": self.input_path.get(),
-                    "output_path": self.output_path.get(),
                     "model_display": self.model_display.get(),
                     "scale": self.scale.get(),
                     "gpu_usage_display": self.gpu_usage_display.get(),
@@ -357,14 +330,12 @@ class SuperResolutionApp:
         if path:
             self.input_path.set(path)
             self.output_path.set(str(Path(path).parent / "upscaled"))
-            self.update_preview(path, None)
 
     def choose_folder(self) -> None:
         path = filedialog.askdirectory(title="选择图片文件夹")
         if path:
             self.input_path.set(path)
             self.output_path.set(str(Path(path) / "upscaled"))
-            self.update_preview(path, None)
 
     def choose_output(self) -> None:
         path = filedialog.askdirectory(title="选择输出文件夹")
@@ -400,64 +371,11 @@ class SuperResolutionApp:
         return Path(value) if value else None
 
     def handle_engine_log(self, text: str) -> None:
-        input_path = self.parse_engine_path(text, "Input: ")
-        if input_path is not None:
-            self.current_processing_input = input_path
         output_path = self.parse_engine_path(text, "Output: ")
         if output_path is not None:
             self.last_output_path = output_path
-            self.last_output_input = self.current_processing_input
             self.open_output_button.configure(state="normal")
         self.append_log(text)
-
-    def preview_source_path(self, path: str | Path | None) -> Path | None:
-        if not path:
-            return None
-        source = Path(path)
-        if source.is_file():
-            return source
-        if source.is_dir():
-            for candidate in sorted(source.iterdir()):
-                if candidate.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}:
-                    return candidate
-        return None
-
-    def make_preview_image(self, path: Path) -> ImageTk.PhotoImage:
-        image = Image.open(path)
-        image.thumbnail((360, 210), Image.Resampling.LANCZOS)
-        if image.mode not in {"RGB", "RGBA"}:
-            image = image.convert("RGB")
-        return ImageTk.PhotoImage(image)
-
-    def update_preview(self, before_path: str | Path | None, after_path: str | Path | None) -> None:
-        self.preview_images.clear()
-        before = self.preview_source_path(before_path)
-        if before and before.exists() and self.preview_before_label is not None:
-            try:
-                before_image = self.make_preview_image(before)
-                self.preview_images.append(before_image)
-                self.preview_before_label.configure(image=before_image, text="")
-                self.preview_before_text.set("")
-            except Exception:
-                self.preview_before_label.configure(image="", textvariable=self.preview_before_text)
-                self.preview_before_text.set("原图预览不可用")
-        elif self.preview_before_label is not None:
-            self.preview_before_label.configure(image="", textvariable=self.preview_before_text)
-            self.preview_before_text.set("原图预览")
-
-        after = self.preview_source_path(after_path)
-        if after and after.exists() and self.preview_after_label is not None:
-            try:
-                after_image = self.make_preview_image(after)
-                self.preview_images.append(after_image)
-                self.preview_after_label.configure(image=after_image, text="")
-                self.preview_after_text.set("")
-            except Exception:
-                self.preview_after_label.configure(image="", textvariable=self.preview_after_text)
-                self.preview_after_text.set("输出预览不可用")
-        elif self.preview_after_label is not None:
-            self.preview_after_label.configure(image="", textvariable=self.preview_after_text)
-            self.preview_after_text.set("输出预览")
 
     def reset_progress(self) -> None:
         self.last_percent = 0.0
@@ -565,9 +483,7 @@ class SuperResolutionApp:
         self.stop_button.configure(state="normal")
         self.reset_progress()
         self.run_started_at = time.monotonic()
-        self.current_processing_input = None
         self.last_output_path = None
-        self.last_output_input = None
 
         threading.Thread(target=self.run_process, args=(self.build_command(),), daemon=True).start()
 
@@ -603,7 +519,6 @@ class SuperResolutionApp:
             self.progress_text.set(f"进度：100% | 已用 {format_duration(elapsed)} | 剩余 00:00")
             self.status.set("完成")
             self.append_log("处理完成。")
-            self.update_preview(self.last_output_input or self.input_path.get(), self.last_output_path)
             messagebox.showinfo("完成", "图片超分已经完成。")
         else:
             self.status.set("未完成")
@@ -653,11 +568,7 @@ class SuperResolutionApp:
             messagebox.showerror("文件缺失", f"找不到安装脚本：{INSTALL_SCRIPT}")
             return
         try:
-            subprocess.Popen(
-                ["powershell", "-ExecutionPolicy", "Bypass", "-NoExit", "-File", str(INSTALL_SCRIPT)],
-                cwd=str(APP_DIR),
-                creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0,
-            )
+            os.startfile(INSTALL_SCRIPT)
         except Exception as exc:
             messagebox.showerror("无法打开安装器", str(exc))
 
