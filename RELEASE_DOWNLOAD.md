@@ -14,7 +14,7 @@ https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest
 
 ## 可选下载器
 
-Release 里也提供 `下载轻量版.bat`。它会把最新轻量包下载到桌面并解压。
+Release 里也提供 `download-lightweight.bat`。它会把最新轻量包下载到桌面并解压。
 
 ## 当前版本
 
