@@ -26,3 +26,13 @@ jobs:
 
       - name: Check command line help
         run: python dlss_like_super_resolution.py --help
+
+      - name: Check GUI module import
+        run: python -c "import dlss_like_super_resolution_gui; print('gui import ok')"
+
+      - name: Check installer release links
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\install-from-github.ps1 -CheckOnly
+
+      - name: Check project metadata
+        run: python tools/check_project.py

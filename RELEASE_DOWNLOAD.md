@@ -2,7 +2,26 @@
 
 完整可运行包包含 `.venv` 运行环境和模型权重，体积较大，因此放在 GitHub Release 附件中，不放入源码仓库。
 
-## 新手下载 3 步
+## 推荐：一键安装器
+
+下载并运行：
+
+```text
+ImageSuperResolutionToolWebSetup.exe
+```
+
+它会自动下载完整包、合并分卷、校验 SHA256、解压并创建快捷方式。
+
+也可以下载脚本版一键安装器：
+
+```text
+install-from-github.bat
+install-from-github.ps1
+```
+
+把这两个文件放在同一个文件夹，双击 `install-from-github.bat` 即可。
+
+## 手动下载 3 步
 
 1. 下载 Release 中的这些文件，并放到同一个文件夹：
 

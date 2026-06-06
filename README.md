@@ -16,20 +16,30 @@ English README: [README.en.md](README.en.md)
 
 ![超分前后对比示意](docs/images/before-after-demo.png)
 
-## 新手下载 3 步
+## 推荐下载方式
 
-1. 打开 [v1.0.0 完整包下载](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.0)，下载下面 4 个文件到同一个文件夹：
-   - `image-super-resolution-tool-full.zip.001`
-   - `image-super-resolution-tool-full.zip.002`
-   - `merge-full-package.ps1`
-   - `SHA256.txt`
-2. 在这个文件夹里打开 PowerShell，运行：
+打开 [v1.0.0 完整包下载](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.0)，优先下载：
+
+```text
+ImageSuperResolutionToolWebSetup.exe
+```
+
+双击运行后，它会自动下载完整包、合并分卷、校验 SHA256、解压并创建快捷方式。
+
+如果不想用安装器，也可以手动下载下面 4 个文件到同一个文件夹：
+
+- `image-super-resolution-tool-full.zip.001`
+- `image-super-resolution-tool-full.zip.002`
+- `merge-full-package.ps1`
+- `SHA256.txt`
+
+在这个文件夹里打开 PowerShell，运行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\merge-full-package.ps1
 ```
 
-3. 等它生成 `image-super-resolution-tool-full.zip`，解压后进入 `image-super-resolution-tool` 文件夹，双击 `start_gui.bat`。
+等它生成 `image-super-resolution-tool-full.zip`，解压后进入 `image-super-resolution-tool` 文件夹，双击 `start_gui.bat`。
 
 如果完整包里的运行环境在你的电脑上不可用，双击 `install_gpu.bat` 重新安装一次即可。
 
@@ -71,6 +81,6 @@ start_gui.bat
 
 超分前后对比图是示意图，用于展示清晰度变化；实际效果取决于原图质量、图片类型和选择的模型。
 
-更多细节见 [README_super_resolution.md](README_super_resolution.md)。完整包下载说明见 [RELEASE_DOWNLOAD.md](RELEASE_DOWNLOAD.md)。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
+更多细节见 [README_super_resolution.md](README_super_resolution.md)。常见问题见 [FAQ.md](FAQ.md)。完整包下载说明见 [RELEASE_DOWNLOAD.md](RELEASE_DOWNLOAD.md)。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 第三方组件和模型说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。使用支持见 [SUPPORT.md](SUPPORT.md)。安全说明见 [SECURITY.md](SECURITY.md)。

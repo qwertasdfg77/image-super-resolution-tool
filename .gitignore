@@ -5,3 +5,5 @@ models/*.pth
 models/*.download
 work/
 *.log
+dist/
+installer/output/

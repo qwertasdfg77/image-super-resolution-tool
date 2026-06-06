@@ -14,20 +14,30 @@ Chinese README: [README.md](README.md)
 
 ![Before and after demo](docs/images/before-after-demo.png)
 
-## Quick Download
+## Recommended Download
 
-1. Open the [v1.0.0 release page](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.0) and download these 4 files into the same folder:
-   - `image-super-resolution-tool-full.zip.001`
-   - `image-super-resolution-tool-full.zip.002`
-   - `merge-full-package.ps1`
-   - `SHA256.txt`
-2. Open PowerShell in that folder and run:
+Open the [v1.0.0 release page](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.0) and download:
+
+```text
+ImageSuperResolutionToolWebSetup.exe
+```
+
+Run it to automatically download the full package, merge split parts, verify SHA256, extract the tool, and create shortcuts.
+
+If you prefer manual installation, download these 4 files into the same folder:
+
+- `image-super-resolution-tool-full.zip.001`
+- `image-super-resolution-tool-full.zip.002`
+- `merge-full-package.ps1`
+- `SHA256.txt`
+
+Open PowerShell in that folder and run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\merge-full-package.ps1
 ```
 
-3. Extract `image-super-resolution-tool-full.zip`, enter the `image-super-resolution-tool` folder, then double-click `start_gui.bat`.
+Extract `image-super-resolution-tool-full.zip`, enter the `image-super-resolution-tool` folder, then double-click `start_gui.bat`.
 
 If the included runtime does not work on your computer, run `install_gpu.bat` once to reinstall the Python/CUDA environment.
 
