@@ -19,7 +19,7 @@ English README: [README.en.md](README.en.md)
 
 ## 推荐下载方式
 
-打开 [v1.0.1 完整包下载](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.1)，优先下载：
+打开 [v1.0.2 完整包下载](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.2)，优先下载：
 
 ```text
 ImageSuperResolutionToolWebSetup.exe
@@ -57,6 +57,10 @@ powershell -ExecutionPolicy Bypass -File .\merge-full-package.ps1
 - 默认使用 ATD x4 Transformer 模型。
 - 支持 Real-ESRGAN 照片/动漫备用模型。
 - 自动锐化和自动去噪。
+- 输出格式选择：自动、PNG、JPEG、WEBP。
+- JPEG/WEBP 质量设置。
+- 处理前后预览，支持打开输出文件夹。
+- 自动检查新版本，并保存上次使用设置。
 - 百分比进度条，显示已用时间和预计剩余时间。
 - 支持单张图片和整个文件夹批量处理。
 

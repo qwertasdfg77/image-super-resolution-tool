@@ -17,7 +17,7 @@ Chinese README: [README.md](README.md)
 
 ## Recommended Download
 
-Open the [v1.0.1 release page](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.1) and download:
+Open the [v1.0.2 release page](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.2) and download:
 
 ```text
 ImageSuperResolutionToolWebSetup.exe
@@ -50,6 +50,9 @@ If the included runtime does not work on your computer, run `install_gpu.bat` on
 - Default ATD x4 Transformer model.
 - Real-ESRGAN photo and anime fallback models.
 - Automatic sharpening and denoise.
+- Output format selection: auto, PNG, JPEG, WEBP.
+- JPEG/WEBP quality setting.
+- Before/after preview, output-folder shortcut, saved settings, and update check.
 - Percentage progress bar with elapsed time and ETA.
 - Single image and folder batch processing.
 

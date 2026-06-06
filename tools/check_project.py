@@ -31,6 +31,7 @@ REQUIRED_FILES = [
     "docs/images/before-after-demo.png",
     "docs/release-v1.0.0.md",
     "docs/release-v1.0.1.md",
+    "docs/release-v1.0.2.md",
     ".github/dependabot.yml",
     ".github/ISSUE_TEMPLATE/bug_report.yml",
     ".github/ISSUE_TEMPLATE/feature_request.yml",
@@ -96,7 +97,7 @@ def check_release_assets(release_tag: str) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-release", action="store_true", help="Skip GitHub Release asset check.")
-    parser.add_argument("--release-tag", default="v1.0.1", help="Release tag to check.")
+    parser.add_argument("--release-tag", default="v1.0.2", help="Release tag to check.")
     args = parser.parse_args()
 
     check_required_files()

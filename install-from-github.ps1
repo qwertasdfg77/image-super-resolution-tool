@@ -1,7 +1,7 @@
 param(
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA "Programs\ImageSuperResolutionTool"),
     [string]$WorkDir = (Join-Path $env:TEMP "ImageSuperResolutionToolInstall"),
-    [string]$ReleaseTag = "v1.0.1",
+    [string]$ReleaseTag = "v1.0.2",
     [switch]$SkipShortcut,
     [switch]$KeepDownloads,
     [switch]$CheckOnly,

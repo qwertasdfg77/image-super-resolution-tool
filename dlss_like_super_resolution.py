@@ -58,6 +58,12 @@ MODEL_SPECS = {
 }
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
+OUTPUT_FORMAT_EXTENSIONS = {
+    "auto": None,
+    "png": ".png",
+    "jpeg": ".jpg",
+    "webp": ".webp",
+}
 
 TORCH = None
 NN = None
@@ -678,18 +684,27 @@ def resize_alpha(alpha: Image.Image | None, size: tuple[int, int]) -> Image.Imag
     return alpha.resize(size, Image.Resampling.LANCZOS)
 
 
-def make_output_path(input_path: Path, output_arg: Path | None, suffix: str, alpha: bool) -> Path:
+def choose_output_extension(input_path: Path, output_format: str, alpha: bool) -> str:
+    if output_format == "auto":
+        return ".png" if alpha else input_path.suffix
+    if output_format == "jpeg" and alpha:
+        return ".png"
+    return OUTPUT_FORMAT_EXTENSIONS[output_format] or input_path.suffix
+
+
+def make_output_path(input_path: Path, output_arg: Path | None, suffix: str, alpha: bool, output_format: str) -> Path:
+    ext = choose_output_extension(input_path, output_format, alpha)
     if output_arg is None:
-        ext = ".png" if alpha else input_path.suffix
         return input_path.with_name(f"{input_path.stem}{suffix}{ext}")
 
     if output_arg.suffix:
+        if output_format != "auto":
+            return output_arg.with_suffix(ext)
         if alpha and output_arg.suffix.lower() in {".jpg", ".jpeg"}:
             return output_arg.with_suffix(".png")
         return output_arg
 
     output_arg.mkdir(parents=True, exist_ok=True)
-    ext = ".png" if alpha else input_path.suffix
     return output_arg / f"{input_path.stem}{suffix}{ext}"
 
 
@@ -748,6 +763,8 @@ def upscale_one_image(args, model, spec: dict, input_path: Path, output_path: Pa
     save_kwargs = {}
     if output_path.suffix.lower() in {".jpg", ".jpeg"}:
         save_kwargs.update({"quality": args.jpeg_quality, "subsampling": 0})
+    elif output_path.suffix.lower() == ".webp":
+        save_kwargs.update({"quality": args.jpeg_quality, "method": 6})
     elif output_path.suffix.lower() == ".png":
         save_kwargs.update({"compress_level": 4})
 
@@ -768,6 +785,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", choices=sorted(MODEL_SPECS), default="transformer", help="Model preset.")
     parser.add_argument("--outscale", type=float, default=4.0, help="Final output scale. The model runs at x4 first.")
     parser.add_argument("--suffix", default="_sr", help="Output filename suffix when output is a folder or omitted.")
+    parser.add_argument("--output-format", choices=sorted(OUTPUT_FORMAT_EXTENSIONS), default="auto", help="Output image format.")
 
     parser.add_argument("--device", choices=["cuda", "cpu"], default="cuda", help="Inference device. CUDA is expected.")
     parser.add_argument("--gpu-usage", choices=["auto", "conservative", "balanced", "performance"], default="auto", help="GPU memory and speed profile.")
@@ -797,6 +815,7 @@ def main() -> None:
         raise SystemExit("--tile must be 'auto' or 0 or greater.")
     if args.tile_pad != "auto" and int(args.tile_pad) < 0:
         raise SystemExit("--tile-pad must be 'auto' or 0 or greater.")
+    args.jpeg_quality = max(1, min(100, args.jpeg_quality))
 
     args.sharpness = parse_auto_float(args.sharpness, 0.0, 2.0, "--sharpness")
     args.denoise = parse_auto_float(args.denoise, 0.0, 1.0, "--denoise")
@@ -839,7 +858,7 @@ def main() -> None:
         rgb.close()
         if alpha is not None:
             alpha.close()
-        output_path = make_output_path(input_path, output_arg, args.suffix, alpha is not None)
+        output_path = make_output_path(input_path, output_arg, args.suffix, alpha is not None, args.output_format)
         upscale_one_image(args, model, spec, input_path, output_path)
 
 

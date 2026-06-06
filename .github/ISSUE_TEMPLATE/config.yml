@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: 下载完整可运行包
-    url: https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.1
+    url: https://github.com/qwertasdfg77/image-super-resolution-tool/releases/tag/v1.0.2
     about: 普通用户建议优先下载 Release 完整包。

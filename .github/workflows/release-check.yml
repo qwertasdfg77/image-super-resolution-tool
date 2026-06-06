@@ -23,4 +23,4 @@ jobs:
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\install-from-github.ps1 -CheckOnly
 
       - name: Check release assets
-        run: python tools/check_project.py --release-tag v1.0.1
+        run: python tools/check_project.py --release-tag v1.0.2
