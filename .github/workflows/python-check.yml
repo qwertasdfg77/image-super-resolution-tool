@@ -10,12 +10,18 @@ jobs:
   syntax:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Syntax check
-        run: python -m py_compile dlss_like_super_resolution.py dlss_like_super_resolution_gui.py install_gpu.py
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          for file_name in ["dlss_like_super_resolution.py", "dlss_like_super_resolution_gui.py", "install_gpu.py"]:
+              ast.parse(Path(file_name).read_text(encoding="utf-8"), filename=file_name)
+          PY
       - name: Lightweight file check
         run: |
           python - <<'PY'
