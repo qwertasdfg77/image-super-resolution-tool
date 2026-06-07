@@ -2,14 +2,14 @@
 
 普通用户推荐下载 Latest Release 里的单文件安装器：
 
-`图片超分辨率工具-v1.1.1-安装器.exe`
+`ImageSuperResolutionTool-v1.1.1-Setup.exe`
 
 Latest Release:
 https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest
 
 ## 使用方式
 
-1. 下载 `图片超分辨率工具-v1.1.1-安装器.exe`。
+1. 下载 `ImageSuperResolutionTool-v1.1.1-Setup.exe`。
 2. 双击运行。
 3. 选择安装位置。
 4. 安装完成后使用桌面快捷方式打开软件。

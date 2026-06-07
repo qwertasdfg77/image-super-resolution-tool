@@ -6,14 +6,14 @@ A Windows GUI image upscaling tool. The current public release is `v1.1.1`.
 
 Download the single installer from the Latest Release page:
 
-- `图片超分辨率工具-v1.1.1-安装器.exe`
+- `ImageSuperResolutionTool-v1.1.1-Setup.exe`
 
 Latest Release:
 https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest
 
 ## Usage
 
-1. Run `图片超分辨率工具-v1.1.1-安装器.exe`.
+1. Run `ImageSuperResolutionTool-v1.1.1-Setup.exe`.
 2. Choose an install location.
 3. Open the desktop shortcut created by the installer.
 4. On first use, click `安装/检查环境` in the app.

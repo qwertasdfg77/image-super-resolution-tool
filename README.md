@@ -6,14 +6,14 @@ Windows 图形界面图片超分工具。当前公开版本是 `v1.1.1`，面向
 
 普通用户只需要到 Latest Release 下载一个文件：
 
-- `图片超分辨率工具-v1.1.1-安装器.exe`
+- `ImageSuperResolutionTool-v1.1.1-Setup.exe`
 
 Latest Release：
 https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest
 
 ## 使用方式
 
-1. 下载 `图片超分辨率工具-v1.1.1-安装器.exe`。
+1. 下载 `ImageSuperResolutionTool-v1.1.1-Setup.exe`。
 2. 双击安装器。
 3. 在弹出的窗口里选择安装位置。
 4. 安装完成后，桌面会出现 `图片超分辨率工具` 快捷方式。

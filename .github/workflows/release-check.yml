@@ -15,5 +15,5 @@ jobs:
         run: |
           set -e
           gh release view --repo "$GITHUB_REPOSITORY" --json tagName,name,assets
-          gh release view --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -x '图片超分辨率工具-v1.1.1-安装器.exe'
+          gh release view --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -x 'ImageSuperResolutionTool-v1.1.1-Setup.exe'
           gh release view --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -x 'SHA256.txt'

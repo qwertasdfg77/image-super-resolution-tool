@@ -4,7 +4,7 @@
 
 单文件安装器版。
 
-- 发布资产改为 `图片超分辨率工具-v1.1.1-安装器.exe`。
+- 发布资产改为 `ImageSuperResolutionTool-v1.1.1-Setup.exe`。
 - 安装器支持选择安装位置。
 - 安装完成后自动创建桌面快捷方式。
 - 安装器内包含 ATD、HAT、Real-ESRGAN 通用照片、Real-ESRGAN 动漫插画四个模型。
