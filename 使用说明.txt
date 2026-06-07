@@ -1,7 +1,7 @@
-图片超分辨率工具 v1.1.1
+图片超分辨率工具 v1.1.2
 
 推荐使用方式：
-1. 从 GitHub Latest Release 下载“ImageSuperResolutionTool-v1.1.1-Setup.exe”。
+1. 从 GitHub Latest Release 下载“ImageSuperResolutionTool-v1.1.2-Setup.exe”。
 2. 双击安装器。
 3. 选择安装位置。
 4. 安装完成后，用桌面快捷方式打开软件。
@@ -16,9 +16,9 @@
 
 说明：
 - 安装器已经包含上面四个模型，不需要用户单独下载模型。
-- 安装器不包含 Python 运行环境和示例照片。
-- CUDA 版 PyTorch 和其它依赖会通过软件内的可视化安装窗口自行下载。
-- 如果电脑没有 Python，启动软件时会打开 Python 下载页。安装 Python 后重新打开软件即可。
+- 安装器包含可直接打开软件界面的启动器，不包含示例照片。
+- 如果电脑没有预装 Python，也应该先进入软件界面，不应该打开 Python 官网。
+- 本地 Python 运行时、CUDA 版 PyTorch 和其它依赖会通过软件内的可视化安装窗口自行下载。
 - RTX 4060 8GB 推荐使用默认 ATD；如果处理速度太慢，可以切换到 Real-ESRGAN 通用照片模型。
 
 推荐配置：

@@ -2,7 +2,7 @@ GitHub 源码仓库不直接存放 .pth 模型文件。
 
 请从 Latest Release 下载单文件安装器：
 
-ImageSuperResolutionTool-v1.1.1-Setup.exe
+ImageSuperResolutionTool-v1.1.2-Setup.exe
 
 该安装器已经包含四个超分模型：
 

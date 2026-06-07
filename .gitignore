@@ -6,6 +6,7 @@ __pycache__/
 *.exe
 *.cab
 *.msi
+*.spec
 *.7z
 *.rar
 *.001
@@ -16,6 +17,8 @@ models/*.onnx
 outputs/
 output/
 input/
+build/
+dist/
 *.jpg
 *.jpeg
 *.png

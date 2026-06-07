@@ -6,8 +6,10 @@ import os
 import queue
 import json
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.request
@@ -16,10 +18,21 @@ from pathlib import Path
 from tkinter import BooleanVar, DoubleVar, IntVar, StringVar, Text, Tk, Toplevel, filedialog, messagebox
 from tkinter import ttk
 
-CURRENT_VERSION = "v1.1.1"
-APP_DIR = Path(__file__).resolve().parent
+CURRENT_VERSION = "v1.1.2"
+
+
+def application_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+APP_DIR = application_dir()
 ENGINE_SCRIPT = APP_DIR / "dlss_like_super_resolution.py"
 APP_ICON = APP_DIR / "super-resolution.ico"
+GUI_EXE = APP_DIR / "图片超分辨率工具.exe"
+LOCAL_PYTHON_DIR = APP_DIR / ".python"
+LOCAL_PYTHON = LOCAL_PYTHON_DIR / "python.exe"
 VENV_DIR = APP_DIR / ".venv"
 VENV_PYTHON = VENV_DIR / "Scripts" / "python.exe"
 VENV_PYTHONW = VENV_DIR / "Scripts" / "pythonw.exe"
@@ -28,6 +41,8 @@ SETTINGS_DIR = Path(os.environ.get("APPDATA", APP_DIR)) / "ImageSuperResolutionT
 SETTINGS_PATH = SETTINGS_DIR / "settings.json"
 LATEST_RELEASE_API = "https://api.github.com/repos/qwertasdfg77/image-super-resolution-tool/releases/latest"
 RELEASES_URL = "https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest"
+PYTHON_INSTALLER_URL = "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe"
+PYTHON_INSTALLER_NAME = "python-3.12.10-amd64.exe"
 
 MODEL_OPTIONS = {
     "ATD 官方超分辨率模型": "atd",
@@ -59,6 +74,13 @@ def runtime_python() -> str:
 
 
 def base_python() -> str:
+    if LOCAL_PYTHON.exists():
+        return str(LOCAL_PYTHON)
+    if getattr(sys, "frozen", False):
+        system_python = shutil.which("python")
+        if system_python:
+            return system_python
+        raise RuntimeError("未找到可用 Python，请先点击“安装/检查环境”安装本地运行环境。")
     exe = Path(sys.executable)
     if exe.name.lower() == "pythonw.exe":
         console_python = exe.with_name("python.exe")
@@ -489,6 +511,11 @@ class SuperResolutionApp:
         if not ENGINE_SCRIPT.exists():
             messagebox.showerror("文件缺失", f"找不到主程序：{ENGINE_SCRIPT}")
             return
+        try:
+            command = self.build_command()
+        except Exception as exc:
+            messagebox.showwarning("需要安装环境", f"{exc}\n\n请先点击“安装/检查环境”。")
+            return
 
         self.save_current_settings()
         self.append_log("")
@@ -500,7 +527,7 @@ class SuperResolutionApp:
         self.run_started_at = time.monotonic()
         self.last_output_path = None
 
-        threading.Thread(target=self.run_process, args=(self.build_command(),), daemon=True).start()
+        threading.Thread(target=self.run_process, args=(command,), daemon=True).start()
 
     def run_process(self, command: list[str]) -> None:
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -669,24 +696,105 @@ class SuperResolutionApp:
                 raise RuntimeError(f"命令执行失败，退出码 {code}：{' '.join(command)}")
             self.root.after(0, lambda: set_progress(end, status))
 
+        def download_python_installer(start: float, end: float) -> Path:
+            target = Path(tempfile.gettempdir()) / PYTHON_INSTALLER_NAME
+            if target.exists() and target.stat().st_size > 20_000_000:
+                self.root.after(0, lambda: append_log(f"复用已下载的 Python 安装器：{target}"))
+                self.root.after(0, lambda: set_progress(end, "Python 安装器已准备好"))
+                return target
+
+            self.root.after(0, lambda: set_progress(start, "下载本地 Python 运行时"))
+            self.root.after(0, lambda: append_log(f"下载：{PYTHON_INSTALLER_URL}"))
+            request = urllib.request.Request(
+                PYTHON_INSTALLER_URL,
+                headers={"User-Agent": f"ImageSuperResolutionTool/{CURRENT_VERSION}"},
+            )
+            downloaded = 0
+            with urllib.request.urlopen(request, timeout=60) as response, target.open("wb") as handle:
+                total = int(response.headers.get("Content-Length", "0") or 0)
+                while True:
+                    chunk = response.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    handle.write(chunk)
+                    downloaded += len(chunk)
+                    if total:
+                        percent = start + (end - start) * min(1.0, downloaded / total)
+                        self.root.after(0, lambda value=percent: set_progress(value))
+            if target.stat().st_size < 20_000_000:
+                raise RuntimeError("Python 安装器下载不完整，请检查网络后重试。")
+            self.root.after(0, lambda: set_progress(end, "Python 安装器已下载"))
+            return target
+
+        def checked_python(executable: str) -> str:
+            flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+            result = subprocess.run(
+                [
+                    executable,
+                    "-c",
+                    "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                creationflags=flags,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(result.stdout.strip() or "Python 版本检查失败。")
+            try:
+                major, minor = (int(part) for part in result.stdout.strip().split(".", 1))
+            except Exception as exc:
+                raise RuntimeError(f"无法识别 Python 版本：{result.stdout.strip()}") from exc
+            if major != 3 or minor < 10 or minor > 12:
+                raise RuntimeError("请使用 Python 3.10、3.11 或 3.12。推荐 Python 3.12。")
+            return executable
+
+        def ensure_python() -> str:
+            if LOCAL_PYTHON.exists():
+                return checked_python(str(LOCAL_PYTHON))
+            try:
+                return checked_python(base_python())
+            except Exception:
+                installer = download_python_installer(5, 18)
+                if LOCAL_PYTHON_DIR.exists() and not LOCAL_PYTHON.exists():
+                    shutil.rmtree(LOCAL_PYTHON_DIR, ignore_errors=True)
+                run_command(
+                    [
+                        str(installer),
+                        "/quiet",
+                        "InstallAllUsers=0",
+                        "PrependPath=0",
+                        "Include_launcher=0",
+                        "Include_pip=1",
+                        "Include_tcltk=1",
+                        "Include_test=0",
+                        "Shortcuts=0",
+                        f"TargetDir={LOCAL_PYTHON_DIR}",
+                    ],
+                    18,
+                    34,
+                    "安装本地 Python 运行时",
+                )
+                if not LOCAL_PYTHON.exists():
+                    raise RuntimeError(f"本地 Python 安装失败，找不到：{LOCAL_PYTHON}")
+                return checked_python(str(LOCAL_PYTHON))
+
         def worker() -> None:
             self.installer_running = True
             try:
-                source_python = base_python()
-                version = sys.version_info[:2]
-                if version < (3, 10) or version > (3, 12):
-                    raise RuntimeError("请使用 Python 3.10、3.11 或 3.12。推荐 Python 3.12。")
-
-                self.root.after(0, lambda: set_progress(5, "检查 Python 运行环境"))
+                self.root.after(0, lambda: set_progress(3, "检查 Python 运行环境"))
+                source_python = ensure_python()
                 self.root.after(0, lambda: append_log(f"Python: {source_python}"))
 
                 if not VENV_PYTHON.exists():
-                    run_command([source_python, "-m", "venv", str(VENV_DIR)], 8, 22, "创建本地运行环境")
+                    run_command([source_python, "-m", "venv", str(VENV_DIR)], 34, 46, "创建本地运行环境")
                 else:
                     self.root.after(0, lambda: append_log("本地运行环境已存在。"))
-                    self.root.after(0, lambda: set_progress(22, "本地运行环境已存在"))
+                    self.root.after(0, lambda: set_progress(46, "本地运行环境已存在"))
 
-                run_command([str(VENV_PYTHON), "-m", "pip", "install", "--upgrade", "pip"], 22, 34, "升级 pip")
+                run_command([str(VENV_PYTHON), "-m", "pip", "install", "--upgrade", "pip"], 46, 54, "升级 pip")
                 run_command(
                     [
                         str(VENV_PYTHON),
@@ -698,11 +806,11 @@ class SuperResolutionApp:
                         "--index-url",
                         "https://download.pytorch.org/whl/cu124",
                     ],
-                    34,
-                    74,
+                    54,
+                    80,
                     "安装 CUDA 版 PyTorch",
                 )
-                run_command([str(VENV_PYTHON), "-m", "pip", "install", "-r", str(REQUIREMENTS)], 74, 90, "安装其它依赖")
+                run_command([str(VENV_PYTHON), "-m", "pip", "install", "-r", str(REQUIREMENTS)], 80, 92, "安装其它依赖")
                 run_command(
                     [
                         str(VENV_PYTHON),
@@ -713,7 +821,7 @@ class SuperResolutionApp:
                             "print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'not found')"
                         ),
                     ],
-                    90,
+                    92,
                     98,
                     "检查 CUDA 和显卡",
                 )
@@ -727,27 +835,39 @@ class SuperResolutionApp:
 
     def check_environment(self, silent: bool) -> None:
         def worker() -> None:
-            command = [
-                runtime_python(),
-                "-c",
-                (
-                    "import sys\n"
-                    "print('Python:', sys.executable)\n"
-                    "try:\n"
-                    "    import torch\n"
-                    "    print('PyTorch:', torch.__version__)\n"
-                    "    print('CUDA:', torch.cuda.is_available())\n"
-                    "    if torch.cuda.is_available():\n"
-                    "        props = torch.cuda.get_device_properties(0)\n"
-                    "        free, total = torch.cuda.mem_get_info(0)\n"
-                    "        print('GPU:', torch.cuda.get_device_name(0))\n"
-                    "        print('VRAM:', round(total / 1024**3, 1), 'GB')\n"
-                    "        print('Free VRAM:', round(free / 1024**3, 1), 'GB')\n"
-                    "        print('SM:', getattr(props, 'multi_processor_count', 0))\n"
-                    "except Exception as e:\n"
-                    "    print('PyTorch/CUDA check failed:', e)\n"
-                ),
-            ]
+            try:
+                command = [
+                    runtime_python(),
+                    "-c",
+                    (
+                        "import sys\n"
+                        "print('Python:', sys.executable)\n"
+                        "try:\n"
+                        "    import torch\n"
+                        "    print('PyTorch:', torch.__version__)\n"
+                        "    print('CUDA:', torch.cuda.is_available())\n"
+                        "    if torch.cuda.is_available():\n"
+                        "        props = torch.cuda.get_device_properties(0)\n"
+                        "        free, total = torch.cuda.mem_get_info(0)\n"
+                        "        print('GPU:', torch.cuda.get_device_name(0))\n"
+                        "        print('VRAM:', round(total / 1024**3, 1), 'GB')\n"
+                        "        print('Free VRAM:', round(free / 1024**3, 1), 'GB')\n"
+                        "        print('SM:', getattr(props, 'multi_processor_count', 0))\n"
+                        "except Exception as e:\n"
+                        "    print('PyTorch/CUDA check failed:', e)\n"
+                    ),
+                ]
+            except Exception as exc:
+                if not silent:
+                    self.log_queue.put("")
+                    self.log_queue.put(str(exc))
+                    self.root.after(
+                        0,
+                        lambda: messagebox.showwarning("需要安装环境", "请先点击“安装/检查环境”安装本地运行环境。"),
+                    )
+                else:
+                    self.root.after(0, lambda: self.status.set("请先点击“安装/检查环境”"))
+                return
             flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
             result = subprocess.run(
                 command,
