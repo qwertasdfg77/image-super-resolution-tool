@@ -3,18 +3,21 @@
 DLSS-like single-image super-resolution for NVIDIA CUDA GPUs.
 
 This is not real DLSS: DLSS needs game-engine data such as motion vectors,
-depth, and multiple frames. This script uses a transformer super-resolution
-model by default plus automatic denoise/sharpen post-processing to get a
-similar "AI upscaled and sharpened" look for still images.
+depth, and multiple frames. This script uses Real-ESRGAN, HAT, and ATD
+super-resolution models plus automatic denoise/sharpen post-processing to get a similar
+"AI upscaled and sharpened" look for still images.
 """
 
 from __future__ import annotations
 
 import argparse
+import html
 import math
 import os
+import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 import warnings
 from dataclasses import dataclass
@@ -28,32 +31,41 @@ warnings.filterwarnings("ignore", message="torch.meshgrid:.*indexing", category=
 
 
 MODEL_SPECS = {
-    "transformer": {
-        "name": "003_ATD_SRx4_finetune",
-        "url": "https://drive.google.com/uc?id=1J9kR9OyrOxtJ5Ygbr_W116BLBwnD4VNL",
-        "scale": 4,
-        "loader": "spandrel",
-        "family": "transformer",
-        "display": "ATD x4 Transformer",
-        "preferred_precision": "fp32",
-    },
     "photo": {
         "name": "RealESRGAN_x4plus",
         "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
         "scale": 4,
-        "loader": "rrdb",
         "family": "gan",
-        "display": "Real-ESRGAN x4 Photo",
+        "display": "Real-ESRGAN x4 通用照片模型",
         "num_block": 23,
     },
     "anime": {
         "name": "RealESRGAN_x4plus_anime_6B",
         "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
         "scale": 4,
-        "loader": "rrdb",
         "family": "gan",
-        "display": "Real-ESRGAN x4 Anime",
+        "display": "Real-ESRGAN x4 动漫插画模型",
         "num_block": 6,
+    },
+    "hat": {
+        "name": "Real_HAT_GAN_sharper",
+        "url": "https://huggingface.co/Acly/hat/resolve/main/Real_HAT_GAN_sharper.pth",
+        "fallback_urls": [
+            "https://hf-mirror.com/Acly/hat/resolve/main/Real_HAT_GAN_sharper.pth",
+        ],
+        "scale": 4,
+        "family": "transformer",
+        "display": "HAT x4 高质量超分辨率模型",
+        "loader": "spandrel",
+    },
+    "atd": {
+        "name": "003_ATD_SRx4_finetune",
+        "url": "https://drive.google.com/uc?export=download&confirm=1&id=1J9kR9OyrOxtJ5Ygbr_W116BLBwnD4VNL",
+        "scale": 4,
+        "family": "transformer",
+        "display": "ATD x4 官方超分辨率模型",
+        "loader": "spandrel",
+        "preferred_precision": "fp32",
     },
 }
 
@@ -68,6 +80,8 @@ OUTPUT_FORMAT_EXTENSIONS = {
 TORCH = None
 NN = None
 F = None
+SPANDREL_MODEL_LOADER = None
+SPANDREL_IMAGE_MODEL_DESCRIPTOR = None
 
 
 @dataclass
@@ -111,13 +125,22 @@ def import_torch():
 
 
 def import_spandrel():
+    """Import Spandrel lazily so Real-ESRGAN can still run without it."""
+    global SPANDREL_MODEL_LOADER, SPANDREL_IMAGE_MODEL_DESCRIPTOR
+    if SPANDREL_MODEL_LOADER is not None:
+        return SPANDREL_MODEL_LOADER, SPANDREL_IMAGE_MODEL_DESCRIPTOR
+
     try:
         from spandrel import ImageModelDescriptor, ModelLoader
     except ModuleNotFoundError as exc:
         raise SystemExit(
-            "Spandrel is not installed. Run the installer again so transformer models can be loaded."
+            "Spandrel is not installed. Click the app's install/check environment button first, or run:\n"
+            "  python -m pip install spandrel>=0.4.2"
         ) from exc
-    return ImageModelDescriptor, ModelLoader
+
+    SPANDREL_MODEL_LOADER = ModelLoader
+    SPANDREL_IMAGE_MODEL_DESCRIPTOR = ImageModelDescriptor
+    return ModelLoader, ImageModelDescriptor
 
 
 def cuda_profile(device: str) -> GpuProfile:
@@ -143,22 +166,20 @@ def cuda_profile(device: str) -> GpuProfile:
 
 
 def choose_runtime_tuning(profile: GpuProfile, spec: dict, usage: str) -> RuntimeTuning:
-    family = spec.get("family", "gan")
     vram = profile.vram_gb
     usage = "balanced" if usage == "auto" else usage
 
-    if family == "transformer":
+    if spec.get("family") == "transformer":
         tiers = [
-            (4.5, 96),
-            (6.5, 128),
-            (8.5, 160),
-            (10.5, 224),
-            (12.5, 256),
-            (16.5, 288),
-            (24.5, 352),
-            (999.0, 448),
+            (4.5, 48),
+            (6.5, 56),
+            (8.5, 64),
+            (12.5, 96),
+            (16.5, 128),
+            (24.5, 160),
+            (999.0, 192),
         ]
-        floor_tile = 96
+        floor_tile = 48
     else:
         tiers = [
             (4.5, 192),
@@ -185,7 +206,10 @@ def choose_runtime_tuning(profile: GpuProfile, spec: dict, usage: str) -> Runtim
         tile = tiers[tier_index + 1][1]
 
     tile = max(floor_tile, tile)
-    tile_pad = max(16, min(48, tile // 6))
+    if spec.get("family") == "transformer":
+        tile_pad = max(12, min(32, tile // 4))
+    else:
+        tile_pad = max(16, min(48, tile // 6))
 
     if usage == "conservative":
         memory_fraction = 0.72
@@ -198,11 +222,16 @@ def choose_runtime_tuning(profile: GpuProfile, spec: dict, usage: str) -> Runtim
     else:
         memory_fraction = 0.91
 
+    capability = 0.0 if profile.capability == "n/a" else float(profile.capability)
     if spec.get("preferred_precision"):
         precision = spec["preferred_precision"]
+        channels_last = False
+    elif spec.get("family") == "transformer":
+        precision = "bf16" if capability >= 8.0 else "fp32"
+        channels_last = False
     else:
-        precision = "fp16" if profile.capability != "n/a" and float(profile.capability) >= 7.0 else "fp32"
-    channels_last = family != "transformer"
+        precision = "fp16" if capability >= 7.0 else "fp32"
+        channels_last = True
     return RuntimeTuning(
         tile=tile,
         tile_pad=tile_pad,
@@ -344,34 +373,61 @@ def build_rrdbnet(num_block: int, scale: int = 4):
     return RRDBNet(num_blocks=num_block, model_scale=scale)
 
 
+def request_url(opener, url: str):
+    request = urllib.request.Request(url, headers={"User-Agent": "ImageSuperResolutionTool/1.0"})
+    return opener.open(request, timeout=60)
+
+
+def resolve_google_drive_warning(url: str, opener) -> str:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.netloc.lower() != "drive.google.com":
+        return url
+
+    with request_url(opener, url) as response:
+        content_type = response.headers.get("Content-Type", "")
+        if "text/html" not in content_type.lower():
+            return url
+        body = response.read().decode("utf-8", errors="ignore")
+
+    if "download-form" not in body:
+        return url
+
+    action_match = re.search(r'<form[^>]+id="download-form"[^>]+action="([^"]+)"', body)
+    if not action_match:
+        return url
+    action = html.unescape(action_match.group(1))
+    inputs = {
+        html.unescape(name): html.unescape(value)
+        for name, value in re.findall(r'<input[^>]+name="([^"]+)"[^>]+value="([^"]*)"', body)
+    }
+    query = urllib.parse.urlencode(inputs)
+    return f"{action}?{query}"
+
+
 def download_with_progress(url: str, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temp_path = destination.with_suffix(destination.suffix + ".download")
 
-    if "drive.google.com" in url:
-        try:
-            import gdown
-        except ModuleNotFoundError as exc:
-            raise SystemExit("gdown is not installed. Run the installer again to enable model downloads.") from exc
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
+    final_url = resolve_google_drive_warning(url, opener)
 
-        if temp_path.exists():
-            temp_path.unlink()
-        downloaded = gdown.download(url, str(temp_path), quiet=False)
-        if not downloaded or not temp_path.exists():
-            raise RuntimeError(f"Model download failed: {url}")
-        temp_path.replace(destination)
-        return
+    with request_url(opener, final_url) as response, temp_path.open("wb") as output_file:
+        total_size = int(response.headers.get("Content-Length") or 0)
+        downloaded = 0
+        while True:
+            chunk = response.read(1024 * 1024)
+            if not chunk:
+                break
+            output_file.write(chunk)
+            downloaded += len(chunk)
+            if total_size > 0:
+                percent = min(downloaded, total_size) * 100 / total_size
+                sys.stdout.write(f"\rDownloading model: {percent:5.1f}%")
+                sys.stdout.flush()
 
-    def progress(block_num: int, block_size: int, total_size: int) -> None:
-        if total_size <= 0:
-            return
-        downloaded = min(block_num * block_size, total_size)
-        percent = downloaded * 100 / total_size
-        sys.stdout.write(f"\rDownloading model: {percent:5.1f}%")
-        sys.stdout.flush()
-
-    urllib.request.urlretrieve(url, temp_path, progress)
     sys.stdout.write("\n")
+    if temp_path.stat().st_size < 1024 * 1024:
+        raise RuntimeError(f"Downloaded model file is too small: {temp_path.stat().st_size} bytes")
     temp_path.replace(destination)
 
 
@@ -380,32 +436,46 @@ def ensure_model(model_key: str, model_dir: Path) -> tuple[Path, dict]:
     model_path = model_dir / f"{spec['name']}.pth"
     if not model_path.exists():
         print(f"Model not found, downloading {spec['name']}...")
-        download_with_progress(spec["url"], model_path)
+        urls = [spec["url"], *spec.get("fallback_urls", [])]
+        last_error = None
+        for url in urls:
+            try:
+                download_with_progress(url, model_path)
+                break
+            except Exception as exc:
+                last_error = exc
+                if model_path.with_suffix(model_path.suffix + ".download").exists():
+                    model_path.with_suffix(model_path.suffix + ".download").unlink()
+                print(f"Download failed from {url}: {exc}")
+        else:
+            raise RuntimeError(f"Could not download {spec['name']}.") from last_error
     return model_path, spec
 
 
 def load_model(model_key: str, model_dir: Path, device: str, precision: str, channels_last: bool):
     torch = import_torch()
     model_path, spec = ensure_model(model_key, model_dir)
+
     if spec.get("loader") == "spandrel":
-        ImageModelDescriptor, ModelLoader = import_spandrel()
-        descriptor = ModelLoader().load_from_file(str(model_path))
+        ModelLoader, ImageModelDescriptor = import_spandrel()
+        descriptor = ModelLoader(device="cpu").load_from_file(model_path)
         if not isinstance(descriptor, ImageModelDescriptor):
-            raise RuntimeError(f"{model_path} is not an image super-resolution model.")
+            raise RuntimeError(f"Unsupported image model descriptor: {model_path}")
+        if descriptor.scale != spec["scale"]:
+            raise RuntimeError(f"Expected x{spec['scale']} model, got x{descriptor.scale}: {model_path}")
 
-        descriptor.eval().to(device)
         if precision == "fp16":
-            try:
-                descriptor.half()
-            except Exception:
-                print("This transformer model did not accept fp16 cleanly; using fp32.")
-                descriptor.float()
-                precision = "fp32"
+            if not descriptor.supports_half:
+                precision = "bf16" if descriptor.supports_bfloat16 and device == "cuda" else "fp32"
+        if precision == "bf16" and not descriptor.supports_bfloat16:
+            precision = "fp32"
 
-        if getattr(descriptor, "scale", None):
-            spec = {**spec, "scale": int(descriptor.scale)}
-        architecture = getattr(getattr(descriptor, "architecture", None), "name", None) or descriptor.__class__.__name__
-        print(f"Loaded transformer model: {architecture} | scale=x{spec['scale']}")
+        descriptor = descriptor.to(device).eval()
+        if precision == "fp16":
+            descriptor = descriptor.half()
+        elif precision == "bf16":
+            descriptor = descriptor.bfloat16()
+
         return descriptor, spec, precision
 
     model = build_rrdbnet(num_block=spec["num_block"], scale=spec["scale"])
@@ -437,6 +507,8 @@ def load_model(model_key: str, model_dir: Path, device: str, precision: str, cha
         model = model.to(memory_format=torch.channels_last)
     if precision == "fp16":
         model = model.half()
+    elif precision == "bf16":
+        model = model.bfloat16()
 
     return model, spec, precision
 
@@ -449,6 +521,8 @@ def image_to_tensor(image: Image.Image, device: str, precision: str, channels_la
         tensor = tensor.contiguous(memory_format=torch.channels_last)
     if precision == "fp16":
         tensor = tensor.half()
+    elif precision == "bf16":
+        tensor = tensor.bfloat16()
     return tensor
 
 
@@ -565,10 +639,10 @@ def upscale_with_oom_backoff(
         try:
             return upscale_tensor_tiled(model, tensor, scale, current_tile, tile_pad, tta, quiet), current_tile
         except RuntimeError as exc:
-            if "out of memory" not in str(exc).lower() or not auto_tile or current_tile <= 96:
+            if "out of memory" not in str(exc).lower() or not auto_tile or current_tile <= 48:
                 raise
             torch.cuda.empty_cache()
-            current_tile = max(96, current_tile // 2)
+            current_tile = max(48, current_tile // 2)
             print(f"CUDA memory was tight; retrying with tile={current_tile}.")
 
 
@@ -776,13 +850,13 @@ def upscale_one_image(args, model, spec: dict, input_path: Path, output_path: Pa
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="CUDA DLSS-like image super-resolution using transformer weights.",
+        description="CUDA DLSS-like image super-resolution using Real-ESRGAN, HAT, and ATD weights.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("input", type=Path, help="Input image file or folder.")
     parser.add_argument("-o", "--output", type=Path, default=None, help="Output file or folder.")
     parser.add_argument("--model-dir", type=Path, default=Path("models"), help="Folder used to cache model weights.")
-    parser.add_argument("--model", choices=sorted(MODEL_SPECS), default="transformer", help="Model preset.")
+    parser.add_argument("--model", choices=sorted(MODEL_SPECS), default="atd", help="Model preset.")
     parser.add_argument("--outscale", type=float, default=4.0, help="Final output scale. The model runs at x4 first.")
     parser.add_argument("--suffix", default="_sr", help="Output filename suffix when output is a folder or omitted.")
     parser.add_argument("--output-format", choices=sorted(OUTPUT_FORMAT_EXTENSIONS), default="auto", help="Output image format.")
@@ -790,7 +864,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", choices=["cuda", "cpu"], default="cuda", help="Inference device. CUDA is expected.")
     parser.add_argument("--gpu-usage", choices=["auto", "conservative", "balanced", "performance"], default="auto", help="GPU memory and speed profile.")
     parser.add_argument("--gpu-memory-fraction", default="auto", help="Maximum CUDA memory fraction, or auto.")
-    parser.add_argument("--precision", choices=["auto", "fp16", "fp32"], default="auto", help="Inference precision.")
+    parser.add_argument("--precision", choices=["auto", "fp16", "bf16", "fp32"], default="auto", help="Inference precision.")
     parser.add_argument("--tile", default="auto", help="Input tile size, or auto.")
     parser.add_argument("--tile-pad", default="auto", help="Extra pixels around each tile, or auto.")
     parser.add_argument("--no-auto-tile", dest="auto_tile", action="store_false", help="Disable automatic tile-size retry on OOM.")

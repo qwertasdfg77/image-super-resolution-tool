@@ -1,29 +1,24 @@
 # Image Super Resolution Tool
 
-A Windows GUI image upscaling tool. The current public release is `v1.0.4` Model Included Edition.
+A Windows GUI image upscaling tool. The current public release is `v1.1.1`.
 
 ## Download
 
-Use the Latest Release page:
+Download the single installer from the Latest Release page:
 
-- `ImageSuperResolutionTool-ModelIncluded.zip`: recommended package with the default Transformer model included.
-- `download-and-install.bat`: one-click download, extract, and environment install helper.
-- `SHA256.txt`: checksum file.
+- `图片超分辨率工具-v1.1.1-安装器.exe`
 
 Latest Release:
 https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest
 
 ## Usage
 
-For the simplest setup, download and run `download-and-install.bat`.
+1. Run `图片超分辨率工具-v1.1.1-安装器.exe`.
+2. Choose an install location.
+3. Open the desktop shortcut created by the installer.
+4. On first use, click `安装/检查环境` in the app.
+5. Select an input image or folder, select an output folder, then start upscaling.
 
-Manual setup:
-
-1. Extract `ImageSuperResolutionTool-ModelIncluded.zip`.
-2. Double-click `打开超分工具.bat`.
-3. On first use, click `安装/检查环境` in the app.
-4. Select input image or folder, select output folder, then start upscaling.
-
-The package includes the default Transformer model, so default upscaling does not need a first-run model download. The Python environment is still installed on the user's computer.
+The installer includes four models: ATD, HAT, Real-ESRGAN photo, and Real-ESRGAN anime. The Python runtime environment is installed on the user's computer through the app.
 
 Recommended GPU: NVIDIA RTX 4060 8GB or higher.

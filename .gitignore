@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 *.pyo
 *.zip
+*.exe
+*.cab
+*.msi
 *.7z
 *.rar
 *.001

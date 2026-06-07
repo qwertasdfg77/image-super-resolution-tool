@@ -1,5 +1,4 @@
 pillow>=12.2.0
 numpy>=2.4.6
-spandrel>=0.4.2
-gdown>=6.1.0
 packaging>=26.2
+spandrel>=0.4.2

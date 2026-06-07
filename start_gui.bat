@@ -35,6 +35,5 @@ if not errorlevel 1 (
     )
 )
 
-call "%APP_DIR%install_gpu.bat"
-if errorlevel 1 exit /b 1
-call "%APP_DIR%start_gui.bat"
+start "" "https://www.python.org/downloads/windows/"
+exit /b 1

@@ -13,23 +13,29 @@ import time
 import urllib.request
 import webbrowser
 from pathlib import Path
-from tkinter import BooleanVar, DoubleVar, IntVar, StringVar, Text, Tk, filedialog, messagebox
+from tkinter import BooleanVar, DoubleVar, IntVar, StringVar, Text, Tk, Toplevel, filedialog, messagebox
 from tkinter import ttk
 
-CURRENT_VERSION = "v1.0.4"
+CURRENT_VERSION = "v1.1.1"
 APP_DIR = Path(__file__).resolve().parent
 ENGINE_SCRIPT = APP_DIR / "dlss_like_super_resolution.py"
-INSTALL_SCRIPT = APP_DIR / "install_gpu.bat"
+APP_ICON = APP_DIR / "super-resolution.ico"
+VENV_DIR = APP_DIR / ".venv"
+VENV_PYTHON = VENV_DIR / "Scripts" / "python.exe"
+VENV_PYTHONW = VENV_DIR / "Scripts" / "pythonw.exe"
+REQUIREMENTS = APP_DIR / "requirements.txt"
 SETTINGS_DIR = Path(os.environ.get("APPDATA", APP_DIR)) / "ImageSuperResolutionTool"
 SETTINGS_PATH = SETTINGS_DIR / "settings.json"
 LATEST_RELEASE_API = "https://api.github.com/repos/qwertasdfg77/image-super-resolution-tool/releases/latest"
 RELEASES_URL = "https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest"
 
 MODEL_OPTIONS = {
-    "ATD Transformer 自动推荐": "transformer",
-    "Real-ESRGAN 照片备用": "photo",
-    "Real-ESRGAN 动漫备用": "anime",
+    "ATD 官方超分辨率模型": "atd",
+    "HAT 高质量超分辨率模型": "hat",
+    "Real-ESRGAN 通用照片模型": "photo",
+    "Real-ESRGAN 动漫插画模型": "anime",
 }
+DEFAULT_MODEL_DISPLAY = "ATD 官方超分辨率模型"
 
 GPU_USAGE_OPTIONS = {
     "自动": "auto",
@@ -47,9 +53,12 @@ OUTPUT_FORMAT_OPTIONS = {
 
 
 def runtime_python() -> str:
-    venv_python = APP_DIR / ".venv" / "Scripts" / "python.exe"
-    if venv_python.exists():
-        return str(venv_python)
+    if VENV_PYTHON.exists():
+        return str(VENV_PYTHON)
+    return base_python()
+
+
+def base_python() -> str:
     exe = Path(sys.executable)
     if exe.name.lower() == "pythonw.exe":
         console_python = exe.with_name("python.exe")
@@ -109,6 +118,11 @@ class SuperResolutionApp:
     def __init__(self, root: Tk):
         self.root = root
         self.root.title(f"图片超分辨率工具 {CURRENT_VERSION}")
+        if APP_ICON.exists():
+            try:
+                self.root.iconbitmap(str(APP_ICON))
+            except Exception:
+                pass
         self.root.geometry("1080x760")
         self.root.minsize(940, 680)
 
@@ -116,7 +130,7 @@ class SuperResolutionApp:
         self.settings_ready = False
         self.input_path = StringVar(value="")
         self.output_path = StringVar(value="")
-        self.model_display = StringVar(value=choice_setting(settings, "model_display", "ATD Transformer 自动推荐", MODEL_OPTIONS))
+        self.model_display = StringVar(value=choice_setting(settings, "model_display", DEFAULT_MODEL_DISPLAY, MODEL_OPTIONS))
         self.scale = StringVar(value=str(settings.get("scale", "4")) if str(settings.get("scale", "4")) in {"2", "3", "4"} else "4")
         self.gpu_usage_display = StringVar(value=choice_setting(settings, "gpu_usage_display", "自动", GPU_USAGE_OPTIONS))
         self.output_format_display = StringVar(value=choice_setting(settings, "output_format_display", "自动", OUTPUT_FORMAT_OPTIONS))
@@ -138,6 +152,7 @@ class SuperResolutionApp:
         self.last_eta: float | None = None
         self.last_percent = 0.0
         self.last_output_path: Path | None = None
+        self.installer_running = False
 
         self.build_ui()
         self.auto_sharpness.trace_add("write", lambda *_: self.update_slider_state())
@@ -564,13 +579,151 @@ class SuperResolutionApp:
         threading.Thread(target=worker, daemon=True).start()
 
     def open_installer(self) -> None:
-        if not INSTALL_SCRIPT.exists():
-            messagebox.showerror("文件缺失", f"找不到安装脚本：{INSTALL_SCRIPT}")
+        if self.installer_running:
+            messagebox.showinfo("安装/检查环境", "环境安装正在进行中，请等待当前任务完成。")
             return
-        try:
-            os.startfile(INSTALL_SCRIPT)
-        except Exception as exc:
-            messagebox.showerror("无法打开安装器", str(exc))
+
+        window = Toplevel(self.root)
+        window.title("安装/检查环境")
+        window.geometry("720x460")
+        window.minsize(620, 380)
+        window.transient(self.root)
+
+        status_text = StringVar(value="准备检查运行环境")
+        percent_text = StringVar(value="0%")
+        progress_value = DoubleVar(value=0)
+
+        body = ttk.Frame(window, padding=16)
+        body.pack(fill="both", expand=True)
+        ttk.Label(body, textvariable=status_text).pack(anchor="w")
+        progress_row = ttk.Frame(body)
+        progress_row.pack(fill="x", pady=(10, 8))
+        ttk.Progressbar(progress_row, variable=progress_value, maximum=100, mode="determinate").pack(
+            side="left", fill="x", expand=True
+        )
+        ttk.Label(progress_row, textvariable=percent_text, width=8, anchor="e").pack(side="left", padx=(10, 0))
+
+        log = Text(body, height=14, wrap="word")
+        log.pack(fill="both", expand=True)
+        log.configure(state="disabled")
+
+        button_row = ttk.Frame(body)
+        button_row.pack(fill="x", pady=(12, 0))
+        close_button = ttk.Button(button_row, text="关闭", state="disabled", command=window.destroy)
+        close_button.pack(side="right")
+
+        def append_log(text: str) -> None:
+            log.configure(state="normal")
+            log.insert("end", text.rstrip() + "\n")
+            log.see("end")
+            log.configure(state="disabled")
+
+        def set_progress(percent: float, status: str | None = None) -> None:
+            percent = max(0, min(100, percent))
+            progress_value.set(percent)
+            percent_text.set(f"{percent:.0f}%")
+            if status:
+                status_text.set(status)
+
+        def finish(success: bool, message: str) -> None:
+            self.installer_running = False
+            close_button.configure(state="normal")
+            set_progress(100 if success else progress_value.get(), message)
+            append_log(message)
+            if success:
+                self.check_environment(silent=True)
+
+        def run_command(command: list[str], start: float, end: float, status: str) -> None:
+            self.root.after(0, lambda: set_progress(start, status))
+            self.root.after(0, lambda: append_log("> " + " ".join(command)))
+
+            stop_animation = threading.Event()
+
+            def animate() -> None:
+                current = start
+                step = max(0.5, (end - start) / 60)
+                while not stop_animation.wait(1.0):
+                    current = min(end - 1, current + step)
+                    self.root.after(0, lambda value=current: set_progress(value))
+
+            threading.Thread(target=animate, daemon=True).start()
+            flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+            process = subprocess.Popen(
+                command,
+                cwd=str(APP_DIR),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                creationflags=flags,
+            )
+            assert process.stdout is not None
+            for line in process.stdout:
+                clean = line.strip()
+                if clean:
+                    self.root.after(0, lambda text=clean: append_log(text))
+            code = process.wait()
+            stop_animation.set()
+            if code != 0:
+                raise RuntimeError(f"命令执行失败，退出码 {code}：{' '.join(command)}")
+            self.root.after(0, lambda: set_progress(end, status))
+
+        def worker() -> None:
+            self.installer_running = True
+            try:
+                source_python = base_python()
+                version = sys.version_info[:2]
+                if version < (3, 10) or version > (3, 12):
+                    raise RuntimeError("请使用 Python 3.10、3.11 或 3.12。推荐 Python 3.12。")
+
+                self.root.after(0, lambda: set_progress(5, "检查 Python 运行环境"))
+                self.root.after(0, lambda: append_log(f"Python: {source_python}"))
+
+                if not VENV_PYTHON.exists():
+                    run_command([source_python, "-m", "venv", str(VENV_DIR)], 8, 22, "创建本地运行环境")
+                else:
+                    self.root.after(0, lambda: append_log("本地运行环境已存在。"))
+                    self.root.after(0, lambda: set_progress(22, "本地运行环境已存在"))
+
+                run_command([str(VENV_PYTHON), "-m", "pip", "install", "--upgrade", "pip"], 22, 34, "升级 pip")
+                run_command(
+                    [
+                        str(VENV_PYTHON),
+                        "-m",
+                        "pip",
+                        "install",
+                        "torch",
+                        "torchvision",
+                        "--index-url",
+                        "https://download.pytorch.org/whl/cu124",
+                    ],
+                    34,
+                    74,
+                    "安装 CUDA 版 PyTorch",
+                )
+                run_command([str(VENV_PYTHON), "-m", "pip", "install", "-r", str(REQUIREMENTS)], 74, 90, "安装其它依赖")
+                run_command(
+                    [
+                        str(VENV_PYTHON),
+                        "-c",
+                        (
+                            "import torch; "
+                            "print('CUDA available:', torch.cuda.is_available()); "
+                            "print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'not found')"
+                        ),
+                    ],
+                    90,
+                    98,
+                    "检查 CUDA 和显卡",
+                )
+                self.root.after(0, lambda: finish(True, "环境已安装并检查完成。"))
+            except Exception as exc:
+                self.root.after(0, lambda error=exc: finish(False, f"环境安装失败：{error}"))
+
+        self.installer_running = True
+        window.protocol("WM_DELETE_WINDOW", lambda: None if self.installer_running else window.destroy())
+        threading.Thread(target=worker, daemon=True).start()
 
     def check_environment(self, silent: bool) -> None:
         def worker() -> None:

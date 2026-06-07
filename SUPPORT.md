@@ -8,10 +8,11 @@ https://github.com/qwertasdfg77/image-super-resolution-tool/issues
 
 反馈时建议提供：
 
-- 工具版本，例如 `v1.0.4`
+- 工具版本，例如 `v1.1.1`
 - Windows 版本
 - NVIDIA 显卡型号和显存
-- 是否使用桌面含模型版
+- 安装位置
+- 使用的模型：ATD 官方超分辨率模型、HAT 高质量超分辨率模型、Real-ESRGAN 通用照片模型或 Real-ESRGAN 动漫插画模型
 - 软件窗口里的运行状态文字或截图
 - 输入图片格式和尺寸
 
