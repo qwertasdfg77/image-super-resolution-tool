@@ -22,22 +22,29 @@ jobs:
           for file_name in ["dlss_like_super_resolution.py", "dlss_like_super_resolution_gui.py", "install_gpu.py"]:
               ast.parse(Path(file_name).read_text(encoding="utf-8"), filename=file_name)
           PY
-      - name: Lightweight file check
+      - name: Repository file check
         run: |
           python - <<'PY'
           from pathlib import Path
           bad = []
+          text_hits = []
+          blocked = ["power" + "shell", "pw" + "sh", "." + "ps1", "download-" + "lightweight.bat"]
           for path in Path('.').rglob('*'):
-              if not path.is_file():
+              if not path.is_file() or '.git' in path.parts:
                   continue
-              parts = set(path.parts)
-              if '.git' in parts:
-                  continue
+              rel = path.as_posix()
               suffix = path.suffix.lower()
-              if '.venv' in parts or '__pycache__' in parts or suffix in {'.pyc', '.pyo'}:
-                  bad.append(str(path))
+              if '.venv' in path.parts or '__pycache__' in path.parts or suffix in {'.pyc', '.pyo', '.download', '.001'}:
+                  bad.append(rel)
               if path.parts[:1] == ('models',) and suffix in {'.pth', '.pt', '.onnx'}:
-                  bad.append(str(path))
-          if bad:
-              raise SystemExit('Unexpected generated files:\n' + '\n'.join(bad))
+                  bad.append(rel)
+              try:
+                  text = path.read_text(encoding='utf-8').lower()
+              except UnicodeDecodeError:
+                  continue
+              for needle in blocked:
+                  if needle.lower() in text:
+                      text_hits.append(f"{rel}: {needle}")
+          if bad or text_hits:
+              raise SystemExit("Bad files:\n" + "\n".join(bad + text_hits))
           PY

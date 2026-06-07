@@ -23,7 +23,7 @@
 
 ## 重要说明
 
-- GitHub 源码仓库不包含 `.venv` 运行环境，也不包含 `models/*.pth` 模型权重。
-- GitHub Release 的完整可运行包包含运行环境和模型权重，方便普通用户直接使用。
+- 含模型版不包含 `.venv` 运行环境，但包含默认 Transformer 模型权重。
+- 默认模型权重文件为 `models/003_ATD_SRx4_finetune.pth`，来源为 ATD / Adaptive Token Dictionary 项目相关发布资源。
 - 如果你要重新分发完整包，请同时保留本文件、`LICENSE`、上游许可证链接，以及模型来源说明。
 - 本项目不是 NVIDIA DLSS。DLSS 是游戏引擎内的多帧实时超采样技术；本项目处理的是单张图片或图片文件夹。

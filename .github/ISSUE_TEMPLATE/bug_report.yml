@@ -6,7 +6,7 @@ body:
     id: version
     attributes:
       label: 工具版本
-      placeholder: v1.0.3
+      placeholder: v1.0.4
     validations:
       required: true
   - type: input
@@ -23,7 +23,7 @@ body:
     id: steps
     attributes:
       label: 出现问题前做了什么
-      description: 请写出选择图片、安装环境、开始处理等步骤。
+      description: 请写出下载、安装环境、选择图片、开始处理等步骤。
     validations:
       required: true
   - type: textarea

@@ -8,10 +8,10 @@ https://github.com/qwertasdfg77/image-super-resolution-tool/issues
 
 反馈时建议提供：
 
-- 工具版本，例如 `v1.0.3`
+- 工具版本，例如 `v1.0.4`
 - Windows 版本
 - NVIDIA 显卡型号和显存
-- 是否使用桌面轻量包
+- 是否使用桌面含模型版
 - 软件窗口里的运行状态文字或截图
 - 输入图片格式和尺寸
 

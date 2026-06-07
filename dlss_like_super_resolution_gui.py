@@ -16,7 +16,7 @@ from pathlib import Path
 from tkinter import BooleanVar, DoubleVar, IntVar, StringVar, Text, Tk, filedialog, messagebox
 from tkinter import ttk
 
-CURRENT_VERSION = "v1.0.3"
+CURRENT_VERSION = "v1.0.4"
 APP_DIR = Path(__file__).resolve().parent
 ENGINE_SCRIPT = APP_DIR / "dlss_like_super_resolution.py"
 INSTALL_SCRIPT = APP_DIR / "install_gpu.bat"
