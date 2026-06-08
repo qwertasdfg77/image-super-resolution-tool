@@ -1,6 +1,17 @@
 # 图片超分辨率工具
 
+[![Latest Release](https://img.shields.io/github/v/release/qwertasdfg77/image-super-resolution-tool?label=latest)](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest)
+[![Download](https://img.shields.io/badge/download-single%20installer-brightgreen)](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest)
+[![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-0078d4)](https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest)
+[![NVIDIA CUDA](https://img.shields.io/badge/NVIDIA-CUDA-76b900)](https://developer.nvidia.com/cuda-zone)
+[![Models](https://img.shields.io/badge/models-ATD%20%7C%20HAT%20%7C%20Real--ESRGAN-orange)](THIRD_PARTY_NOTICES.md)
+[![License](https://img.shields.io/github/license/qwertasdfg77/image-super-resolution-tool)](LICENSE)
+
 Windows 图形界面图片超分工具。当前公开版本是 `v1.1.2`，面向普通用户使用，不需要写代码。
+
+关键词：图片超分辨率、AI 放大、照片增强、动漫插画超分、NVIDIA CUDA、RTX 4060、ATD、HAT、Real-ESRGAN。
+
+English version: [Image Super Resolution Tool](https://github.com/qwertasdfg77/image-super-resolution-tool-en)
 
 ## 下载
 
