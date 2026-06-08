@@ -7,7 +7,7 @@
 [![Models](https://img.shields.io/badge/models-ATD%20%7C%20HAT%20%7C%20Real--ESRGAN-orange)](THIRD_PARTY_NOTICES.md)
 [![License](https://img.shields.io/github/license/qwertasdfg77/image-super-resolution-tool)](LICENSE)
 
-Windows 图形界面图片超分工具。当前公开版本是 `v1.1.2`，面向普通用户使用，不需要写代码。
+Windows 图形界面图片超分工具。当前公开版本是 `v1.1.3`，面向普通用户使用，不需要写代码。
 
 关键词：图片超分辨率、AI 放大、照片增强、动漫插画超分、NVIDIA CUDA、RTX 4060、ATD、HAT、Real-ESRGAN。
 
@@ -17,14 +17,14 @@ English version: [Image Super Resolution Tool](https://github.com/qwertasdfg77/i
 
 普通用户只需要到 Latest Release 下载一个文件：
 
-- `ImageSuperResolutionTool-v1.1.2-Setup.exe`
+- `ImageSuperResolutionTool-v1.1.3-Setup.exe`
 
 Latest Release：
 https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest
 
 ## 使用方式
 
-1. 下载 `ImageSuperResolutionTool-v1.1.2-Setup.exe`。
+1. 下载 `ImageSuperResolutionTool-v1.1.3-Setup.exe`。
 2. 双击安装器。
 3. 在弹出的窗口里选择安装位置。
 4. 安装完成后，桌面会出现 `图片超分辨率工具` 快捷方式。
@@ -39,7 +39,7 @@ https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest
 - Real-ESRGAN 动漫插画模型。
 - 程序图标和桌面快捷方式创建逻辑。
 
-安装器包含可直接打开软件界面的启动器。电脑没有预装 Python 时，也应先进入软件界面；第一次使用时点击软件内 `安装/检查环境`，程序会下载本地 Python 运行时、CUDA 版 PyTorch 和其它依赖。
+安装器包含可直接打开软件界面的启动器。电脑没有预装 Python 时，也应先进入软件界面；第一次使用时点击软件内 `安装/检查环境`，程序会下载本地 Python 运行时、CUDA 版 PyTorch 和其它依赖。运行环境会安装到当前用户的本地数据目录，避免安装目录在桌面或受保护位置时写入失败。
 
 ## 主要功能
 

@@ -2,14 +2,14 @@
 
 普通用户推荐下载 Latest Release 里的单文件安装器：
 
-`ImageSuperResolutionTool-v1.1.2-Setup.exe`
+`ImageSuperResolutionTool-v1.1.3-Setup.exe`
 
 Latest Release:
 https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest
 
 ## 使用方式
 
-1. 下载 `ImageSuperResolutionTool-v1.1.2-Setup.exe`。
+1. 下载 `ImageSuperResolutionTool-v1.1.3-Setup.exe`。
 2. 双击运行。
 3. 选择安装位置。
 4. 安装完成后使用桌面快捷方式打开软件。
@@ -17,10 +17,10 @@ https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest
 
 ## 当前版本
 
-`v1.1.2` 是单文件安装器版：
+`v1.1.3` 是单文件安装器版：
 
 - 安装器内包含四个超分模型。
 - 支持自定义安装位置。
 - 安装后自动创建桌面快捷方式。
-- 不预置 `.venv` 运行环境；第一次使用由软件内 `安装/检查环境` 安装本地 Python 运行时、CUDA PyTorch 和其它依赖。
+- 不预置 `.venv` 运行环境；第一次使用由软件内 `安装/检查环境` 安装本地 Python 运行时、CUDA PyTorch 和其它依赖，运行环境保存到当前用户的本地数据目录。
 - 不包含示例照片。

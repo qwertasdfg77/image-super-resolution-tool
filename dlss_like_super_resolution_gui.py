@@ -18,7 +18,7 @@ from pathlib import Path
 from tkinter import BooleanVar, DoubleVar, IntVar, StringVar, Text, Tk, Toplevel, filedialog, messagebox
 from tkinter import ttk
 
-CURRENT_VERSION = "v1.1.2"
+CURRENT_VERSION = "v1.1.3"
 
 
 def application_dir() -> Path:
@@ -31,18 +31,27 @@ APP_DIR = application_dir()
 ENGINE_SCRIPT = APP_DIR / "dlss_like_super_resolution.py"
 APP_ICON = APP_DIR / "super-resolution.ico"
 GUI_EXE = APP_DIR / "图片超分辨率工具.exe"
-LOCAL_PYTHON_DIR = APP_DIR / ".python"
+APP_DATA_NAME = "ImageSuperResolutionTool"
+APP_DATA_ROOT = Path(os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA") or APP_DIR) / APP_DATA_NAME
+RUNTIME_ROOT = APP_DATA_ROOT / "runtime"
+LOCAL_PYTHON_DIR = RUNTIME_ROOT / "python-3.12.10"
 LOCAL_PYTHON = LOCAL_PYTHON_DIR / "python.exe"
-VENV_DIR = APP_DIR / ".venv"
+LEGACY_LOCAL_PYTHON_DIR = APP_DIR / ".python"
+LEGACY_LOCAL_PYTHON = LEGACY_LOCAL_PYTHON_DIR / "python.exe"
+VENV_DIR = RUNTIME_ROOT / ".venv"
 VENV_PYTHON = VENV_DIR / "Scripts" / "python.exe"
 VENV_PYTHONW = VENV_DIR / "Scripts" / "pythonw.exe"
+LEGACY_VENV_DIR = APP_DIR / ".venv"
+LEGACY_VENV_PYTHON = LEGACY_VENV_DIR / "Scripts" / "python.exe"
+LEGACY_VENV_PYTHONW = LEGACY_VENV_DIR / "Scripts" / "pythonw.exe"
 REQUIREMENTS = APP_DIR / "requirements.txt"
-SETTINGS_DIR = Path(os.environ.get("APPDATA", APP_DIR)) / "ImageSuperResolutionTool"
+SETTINGS_DIR = Path(os.environ.get("APPDATA", APP_DIR)) / APP_DATA_NAME
 SETTINGS_PATH = SETTINGS_DIR / "settings.json"
 LATEST_RELEASE_API = "https://api.github.com/repos/qwertasdfg77/image-super-resolution-tool/releases/latest"
 RELEASES_URL = "https://github.com/qwertasdfg77/image-super-resolution-tool/releases/latest"
 PYTHON_INSTALLER_URL = "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe"
 PYTHON_INSTALLER_NAME = "python-3.12.10-amd64.exe"
+PYTHON_INSTALLER_LOG = RUNTIME_ROOT / "python-installer.log"
 
 MODEL_OPTIONS = {
     "ATD 官方超分辨率模型": "atd",
@@ -67,26 +76,76 @@ OUTPUT_FORMAT_OPTIONS = {
 }
 
 
+def installed_venv_python() -> Path | None:
+    for candidate in (VENV_PYTHON, LEGACY_VENV_PYTHON):
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def runtime_python() -> str:
-    if VENV_PYTHON.exists():
-        return str(VENV_PYTHON)
+    installed = installed_venv_python()
+    if installed:
+        return str(installed)
     return base_python()
 
 
+def is_windows_store_alias(path: str) -> bool:
+    return "\\microsoft\\windowsapps\\" in path.lower()
+
+
+def python_candidate_paths(include_local: bool = True) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def add(value: str | Path | None) -> None:
+        if not value:
+            return
+        path = Path(value)
+        try:
+            resolved = str(path.resolve())
+        except Exception:
+            resolved = str(path)
+        key = resolved.lower()
+        if key in seen or is_windows_store_alias(resolved) or not path.exists():
+            return
+        seen.add(key)
+        candidates.append(resolved)
+
+    if include_local:
+        add(LOCAL_PYTHON)
+        add(LEGACY_LOCAL_PYTHON)
+
+    if not getattr(sys, "frozen", False):
+        exe = Path(sys.executable)
+        if exe.name.lower() == "pythonw.exe":
+            add(exe.with_name("python.exe"))
+        add(exe)
+
+    add(shutil.which("python"))
+    add(shutil.which("python3"))
+
+    search_roots: list[Path] = []
+    if os.environ.get("LOCALAPPDATA"):
+        search_roots.append(Path(os.environ["LOCALAPPDATA"]) / "Programs" / "Python")
+    if os.environ.get("ProgramFiles"):
+        search_roots.append(Path(os.environ["ProgramFiles"]))
+    if os.environ.get("ProgramFiles(x86)"):
+        search_roots.append(Path(os.environ["ProgramFiles(x86)"]))
+    for root in search_roots:
+        if not root.exists():
+            continue
+        for candidate in sorted(root.glob("Python3*/python.exe"), reverse=True):
+            add(candidate)
+
+    return candidates
+
+
 def base_python() -> str:
-    if LOCAL_PYTHON.exists():
-        return str(LOCAL_PYTHON)
-    if getattr(sys, "frozen", False):
-        system_python = shutil.which("python")
-        if system_python:
-            return system_python
-        raise RuntimeError("未找到可用 Python，请先点击“安装/检查环境”安装本地运行环境。")
-    exe = Path(sys.executable)
-    if exe.name.lower() == "pythonw.exe":
-        console_python = exe.with_name("python.exe")
-        if console_python.exists():
-            return str(console_python)
-    return str(exe)
+    candidates = python_candidate_paths()
+    if candidates:
+        return candidates[0]
+    raise RuntimeError("未找到可用 Python，请先点击“安装/检查环境”安装本地运行环境。")
 
 
 def format_duration(seconds: float | None) -> str:
@@ -660,9 +719,14 @@ class SuperResolutionApp:
             if success:
                 self.check_environment(silent=True)
 
+        def format_command(command: list[str]) -> str:
+            if os.name == "nt":
+                return subprocess.list2cmdline(command)
+            return " ".join(command)
+
         def run_command(command: list[str], start: float, end: float, status: str) -> None:
             self.root.after(0, lambda: set_progress(start, status))
-            self.root.after(0, lambda: append_log("> " + " ".join(command)))
+            self.root.after(0, lambda: append_log("> " + format_command(command)))
 
             stop_animation = threading.Event()
 
@@ -693,15 +757,19 @@ class SuperResolutionApp:
             code = process.wait()
             stop_animation.set()
             if code != 0:
-                raise RuntimeError(f"命令执行失败，退出码 {code}：{' '.join(command)}")
+                raise RuntimeError(f"命令执行失败，退出码 {code}：{format_command(command)}")
             self.root.after(0, lambda: set_progress(end, status))
 
-        def download_python_installer(start: float, end: float) -> Path:
+        def download_python_installer(start: float, end: float, force_download: bool = False) -> Path:
             target = Path(tempfile.gettempdir()) / PYTHON_INSTALLER_NAME
+            if force_download and target.exists():
+                target.unlink(missing_ok=True)
             if target.exists() and target.stat().st_size > 20_000_000:
                 self.root.after(0, lambda: append_log(f"复用已下载的 Python 安装器：{target}"))
                 self.root.after(0, lambda: set_progress(end, "Python 安装器已准备好"))
                 return target
+            if target.exists():
+                target.unlink(missing_ok=True)
 
             self.root.after(0, lambda: set_progress(start, "下载本地 Python 运行时"))
             self.root.after(0, lambda: append_log(f"下载：{PYTHON_INSTALLER_URL}"))
@@ -726,7 +794,8 @@ class SuperResolutionApp:
             self.root.after(0, lambda: set_progress(end, "Python 安装器已下载"))
             return target
 
-        def checked_python(executable: str) -> str:
+        def checked_python(executable: str | Path) -> str:
+            executable = str(executable)
             flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
             result = subprocess.run(
                 [
@@ -751,35 +820,75 @@ class SuperResolutionApp:
                 raise RuntimeError("请使用 Python 3.10、3.11 或 3.12。推荐 Python 3.12。")
             return executable
 
-        def ensure_python() -> str:
-            if LOCAL_PYTHON.exists():
-                return checked_python(str(LOCAL_PYTHON))
-            try:
-                return checked_python(base_python())
-            except Exception:
-                installer = download_python_installer(5, 18)
+        def checked_python_candidates(include_local: bool = True) -> str | None:
+            for candidate in python_candidate_paths(include_local=include_local):
+                try:
+                    return checked_python(candidate)
+                except Exception as exc:
+                    self.root.after(0, lambda path=candidate, error=exc: append_log(f"忽略不可用 Python：{path}（{error}）"))
+            return None
+
+        def install_local_python() -> str:
+            RUNTIME_ROOT.mkdir(parents=True, exist_ok=True)
+            last_error: Exception | None = None
+            for attempt in range(2):
+                installer = download_python_installer(5, 18, force_download=attempt > 0)
                 if LOCAL_PYTHON_DIR.exists() and not LOCAL_PYTHON.exists():
                     shutil.rmtree(LOCAL_PYTHON_DIR, ignore_errors=True)
-                run_command(
-                    [
-                        str(installer),
-                        "/quiet",
-                        "InstallAllUsers=0",
-                        "PrependPath=0",
-                        "Include_launcher=0",
-                        "Include_pip=1",
-                        "Include_tcltk=1",
-                        "Include_test=0",
-                        "Shortcuts=0",
-                        f"TargetDir={LOCAL_PYTHON_DIR}",
-                    ],
-                    18,
-                    34,
-                    "安装本地 Python 运行时",
-                )
-                if not LOCAL_PYTHON.exists():
-                    raise RuntimeError(f"本地 Python 安装失败，找不到：{LOCAL_PYTHON}")
-                return checked_python(str(LOCAL_PYTHON))
+                LOCAL_PYTHON_DIR.parent.mkdir(parents=True, exist_ok=True)
+                self.root.after(0, lambda: append_log(f"Python 安装目录：{LOCAL_PYTHON_DIR}"))
+                self.root.after(0, lambda: append_log(f"Python 安装日志：{PYTHON_INSTALLER_LOG}"))
+                try:
+                    run_command(
+                        [
+                            str(installer),
+                            "/quiet",
+                            "/log",
+                            str(PYTHON_INSTALLER_LOG),
+                            "InstallAllUsers=0",
+                            "PrependPath=0",
+                            "Include_launcher=0",
+                            "InstallLauncherAllUsers=0",
+                            "Include_pip=1",
+                            "Include_tcltk=1",
+                            "Include_test=0",
+                            "Shortcuts=0",
+                            f"TargetDir={LOCAL_PYTHON_DIR}",
+                        ],
+                        18,
+                        34,
+                        "安装本地 Python 运行时",
+                    )
+                except Exception as exc:
+                    last_error = exc
+                    if attempt == 0:
+                        self.root.after(0, lambda: append_log("Python 安装器运行失败，重新下载安装器后再试。"))
+                        continue
+                    raise RuntimeError(f"Python 安装器运行失败：{exc}；安装日志：{PYTHON_INSTALLER_LOG}") from exc
+
+                if LOCAL_PYTHON.exists():
+                    return checked_python(LOCAL_PYTHON)
+
+                fallback = checked_python_candidates(include_local=False)
+                if fallback:
+                    self.root.after(
+                        0,
+                        lambda path=fallback: append_log(f"安装器未写入指定目录，已改用检测到的 Python：{path}"),
+                    )
+                    return fallback
+
+                if attempt == 0:
+                    self.root.after(0, lambda: append_log("未找到安装后的 Python，重新下载安装器后再试。"))
+                    continue
+
+            detail = f"；最后错误：{last_error}" if last_error else ""
+            raise RuntimeError(f"本地 Python 安装失败，找不到：{LOCAL_PYTHON}；安装日志：{PYTHON_INSTALLER_LOG}{detail}")
+
+        def ensure_python() -> str:
+            existing = checked_python_candidates()
+            if existing:
+                return existing
+            return install_local_python()
 
         def worker() -> None:
             self.installer_running = True
@@ -788,16 +897,23 @@ class SuperResolutionApp:
                 source_python = ensure_python()
                 self.root.after(0, lambda: append_log(f"Python: {source_python}"))
 
-                if not VENV_PYTHON.exists():
+                active_venv_python = installed_venv_python()
+                if not active_venv_python:
+                    if VENV_DIR.exists() and not VENV_PYTHON.exists():
+                        shutil.rmtree(VENV_DIR, ignore_errors=True)
+                    VENV_DIR.parent.mkdir(parents=True, exist_ok=True)
                     run_command([source_python, "-m", "venv", str(VENV_DIR)], 34, 46, "创建本地运行环境")
+                    active_venv_python = VENV_PYTHON
+                    if not active_venv_python.exists():
+                        raise RuntimeError(f"创建本地运行环境失败，找不到：{active_venv_python}")
                 else:
                     self.root.after(0, lambda: append_log("本地运行环境已存在。"))
                     self.root.after(0, lambda: set_progress(46, "本地运行环境已存在"))
 
-                run_command([str(VENV_PYTHON), "-m", "pip", "install", "--upgrade", "pip"], 46, 54, "升级 pip")
+                run_command([str(active_venv_python), "-m", "pip", "install", "--upgrade", "pip"], 46, 54, "升级 pip")
                 run_command(
                     [
-                        str(VENV_PYTHON),
+                        str(active_venv_python),
                         "-m",
                         "pip",
                         "install",
@@ -810,10 +926,10 @@ class SuperResolutionApp:
                     80,
                     "安装 CUDA 版 PyTorch",
                 )
-                run_command([str(VENV_PYTHON), "-m", "pip", "install", "-r", str(REQUIREMENTS)], 80, 92, "安装其它依赖")
+                run_command([str(active_venv_python), "-m", "pip", "install", "-r", str(REQUIREMENTS)], 80, 92, "安装其它依赖")
                 run_command(
                     [
-                        str(VENV_PYTHON),
+                        str(active_venv_python),
                         "-c",
                         (
                             "import torch; "
